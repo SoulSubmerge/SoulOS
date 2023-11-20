@@ -3,14 +3,14 @@ plugin_ctrl: extfpuirq=true, speaker=true, iodebug=true, usb_uhci=false, voodoo=
 config_interface: textconfig
 display_library: x, options="gui_debug"
 memory: host=32, guest=32
-romimage: file="/home/soul/Tools/bochs-2.7/share/bochs/BIOS-bochs-latest", address=0x00000000, options=none
-vgaromimage: file="/home/soul/Tools/bochs-2.7/share/bochs/VGABIOS-lgpl-latest"
+romimage: file="./debug-tools/bochs-2.7/share/bochs/BIOS-bochs-latest", address=0x00000000, options=none
+vgaromimage: file="./debug-tools/bochs-2.7/share/bochs/VGABIOS-lgpl-latest"
 boot: disk
 floppy_bootsig_check: disabled=0
 floppya: type=1_44
 # no floppyb
 ata0: enabled=true, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
-ata0-master: type=disk, path="/home/soul/SoulOS/src/SoulOS.img", mode=flat
+ata0-master: type=disk, path="./temp/SoulOS.img", mode=flat
 ata0-slave: type=none
 ata1: enabled=true, ioaddr1=0x170, ioaddr2=0x370, irq=15
 ata1-master: type=none

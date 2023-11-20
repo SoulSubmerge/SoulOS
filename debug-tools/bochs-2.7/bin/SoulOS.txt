@@ -1,0 +1,4 @@
+Creating hard disk image 'SoulOS.img' with CHS=32/16/63 (sector size = 512)
+
+The following line should appear in your bochsrc:
+  ata0-master: type=disk, path="SoulOS.img", mode=flat
