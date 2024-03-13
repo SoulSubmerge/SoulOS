@@ -8,7 +8,8 @@ int 0x10
 ; 初始化段寄存器
 mov ax, 0x7c0 ; 因为主引导扇区的主引导代码一开始会被载入带内存的 0x7c00 的位置
 mov ds, ax
-xor ax, ax
+xor ax, ax 
+
 mov es, ax
 mov ss, ax
 mov sp, 0x7c00
@@ -22,6 +23,7 @@ call print
 ; 阻塞
 jmp $
 
+; 打印相关的文本信息到屏幕
 print:
     mov ah, 0x0e
     .next:
