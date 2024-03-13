@@ -9,6 +9,8 @@ int 0x10
 mov ax, 0x7c0 ; 因为主引导扇区的主引导代码一开始会被载入带内存的 0x7c00 的位置
 mov ds, ax
 xor ax, ax 
+
+; 再次查看github是否ok
 ; 测试提交效果
 mov es, ax
 mov ss, ax
