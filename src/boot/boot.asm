@@ -14,7 +14,7 @@ mov ss, ax
 mov sp, 0x7c00
 
 ; booting 相关信息显示
-xchg bx, bx ; 魔术断点
+; xchg bx, bx ; 魔术断点
 mov si, bootingMessage
 call PrintFn
 

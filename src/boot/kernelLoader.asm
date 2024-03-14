@@ -17,7 +17,22 @@ mov sp, 0x1000
 mov si, kernelLoadingMessage
 call PrintFn
 
-jmp $
+; 进入保护模式代码
+PrepareProtectedMode:
+    cli ; 关闭中断
+    ; 打开 A20 总线
+    in al, 0x92
+    or al, 0b10
+    out 0x92, al
+    lgdt [gdtPtr]
+    ; 启动保护模式
+    mov eax, cr0
+    or eax, 1
+    mov cr0, eax
+    jmp dword CODE_SELECTOR: (0x1000 + ProtectMode)
+
+
+
 
 ; 打印相关的文本信息到屏幕
 PrintFn:
@@ -35,3 +50,130 @@ PrintFn:
 
 kernelLoadingMessage:
     db "The SoulOS kernel loader code is loaded.", 0x0a, 0x0d, 0x00 ; 
+
+[bits 32]
+ProtectMode:
+    mov eax, DATA_SELECTOR
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov esp, 0x10000
+    
+    ; 读取内核代码
+    ; 0x100000 - 0xAFFFFF 为内核的栈空间 10MB
+    ; 0xB00000 - 0x14FFFFF 为内核的代码 10MB
+    ; 0x14FFFFF - 2G 数据空间
+    xchg bx, bx
+    push 0x05
+    push 0xB00000
+    push 0xc8 ; 200
+    call ReadDiskFn
+    pop eax
+    pop eax
+    pop eax
+    xchg bx, bx
+    jmp dword CODE_SELECTOR:0xB00000
+
+; 磁盘读取代码
+ReadDiskFn:
+    mov ebx, [esp + 8] ; 读取数据到目标的内存地址
+    mov ecx, [esp + 4] ; 读取的扇区数
+
+    ; 设置读写扇区的数量
+    mov dx, 0x1f2
+    mov al, cl
+    out dx, al
+
+    mov eax, [esp + 12] ; 读取的起始扇区编号
+    
+    inc dx; 0x1f3 起始扇区的前八位
+    out dx, al
+
+    inc dx; 0x1f4 起始扇区的中八位
+    shr eax, 8
+    out dx, al
+
+    inc dx; 0x1f5 起始扇区的高八位
+    shr eax, 8
+    out dx, al
+
+    inc dx; 0x1f6
+    shr eax, 8
+    and eax, 0x000F; 将高四位置为 0
+    or eax, 0x00E0 ;
+    out dx, al; 主盘 - LBA 模式
+
+    inc dx; 0x1f7
+    mov eax, 0x20; 读硬盘
+    out dx, al
+
+    .ReadFn:
+        push ecx
+        call .WaitsFn
+        call .readsFn
+        pop ecx
+        loop .ReadFn
+    ret
+
+    .WaitsFn:
+        mov dx, 0x1f7
+        .CheckFn:
+            in al, dx
+            jmp $+2; nop 直接跳转到下一行
+            jmp $+2; 一点点延迟
+            jmp $+2
+            and al, 0b1000_1000
+            cmp al, 0b0000_1000
+            jnz .CheckFn
+        ret
+    
+    .readsFn:
+        mov dx, 0x1f0
+        mov cx, 256; 一个扇区 256 字, 1字 = 2byte
+        .ReadWordFn:
+            in ax, dx
+            jmp $+2; 一点点延迟
+            jmp $+2
+            jmp $+2
+            mov [ebx], ax
+            add ebx, 2
+            cmp cx, 0
+            loop .ReadWordFn
+        ret
+
+
+
+CODE_SELECTOR equ (1 << 3)
+DATA_SELECTOR equ (2 << 3)
+
+MEMORY_BASE equ 0 ; 内存的基地址
+
+; 内存界限 4G / 4K - 1
+MEMORY_LIMIT equ ((1024 * 1024 * 1024 * 4) / (1024 * 4)) - 1
+
+gdtPtr:
+    dw (gdtEnd - gdtBase) - 1
+    dd 0x1000 + gdtBase
+gdtBase:
+    dd 0, 0; NULL 描述符
+gdtCode:
+    dw MEMORY_LIMIT & 0xffff; 段界限 0 ~ 15 位
+    dw MEMORY_BASE & 0xffff; 基地址 0 ~ 15 位
+    db (MEMORY_BASE >> 16) & 0xff; 基地址 16 ~ 23 位
+    ; 存在 - dlp 0 - S _ 代码 - 非依从 - 可读 - 没有被访问过
+    db 0b_1_00_1_1_0_1_0;
+    ; 4k - 32 位 - 不是 64 位 - 段界限 16 ~ 19
+    db 0b1_1_0_0_0000 | (MEMORY_LIMIT >> 16) & 0xf;
+    db (MEMORY_BASE >> 24) & 0xff; 基地址 24 ~ 31 位
+gdtData:
+    dw MEMORY_LIMIT & 0xffff; 段界限 0 ~ 15 位
+    dw MEMORY_BASE & 0xffff; 基地址 0 ~ 15 位
+    db (MEMORY_BASE >> 16) & 0xff; 基地址 16 ~ 23 位
+    ; 存在 - dlp 0 - S _ 数据 - 向上 - 可写 - 没有被访问过
+    db 0b_1_00_1_0_0_1_0;
+    ; 4k - 32 位 - 不是 64 位 - 段界限 16 ~ 19
+    db 0b1_1_0_0_0000 | (MEMORY_LIMIT >> 16) & 0xf;
+    db (MEMORY_BASE >> 24) & 0xff; 基地址 24 ~ 31 位
+gdtEnd:
