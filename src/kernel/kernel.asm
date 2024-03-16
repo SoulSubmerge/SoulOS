@@ -1,5 +1,11 @@
 [bits 32]
 
-xchg bx, bx
-mov eax, 666
-jmp $
+extern KernelInit
+
+global _start
+_start:
+    mov byte [0xB8000], 'A'
+    xchg bx, bx
+    call KernelInit
+    xchg bx, bx
+    jmp $

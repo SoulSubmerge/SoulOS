@@ -65,15 +65,14 @@ ProtectMode:
     ; 0x100000 - 0xAFFFFF 为内核的栈空间 10MB
     ; 0xB00000 - 0x14FFFFF 为内核的代码 10MB
     ; 0x14FFFFF - 2G 数据空间
-    xchg bx, bx
     push 0x05
     push 0xB00000
     push 0xc8 ; 200
     call ReadDiskFn
-    pop eax
-    pop eax
-    pop eax
-    xchg bx, bx
+    add esp, 0xc0
+    ; pop eax
+    ; pop eax
+    ; pop eax
     jmp dword CODE_SELECTOR:0xB00000
 
 ; 磁盘读取代码
@@ -87,7 +86,7 @@ ReadDiskFn:
     out dx, al
 
     mov eax, [esp + 12] ; 读取的起始扇区编号
-    
+
     inc dx; 0x1f3 起始扇区的前八位
     out dx, al
 
