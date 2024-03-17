@@ -63,29 +63,65 @@ ProtectMode:
     
     ; 读取内核代码
     ; 0x100000 - 0xAFFFFF 为内核的栈空间 10MB
-    ; 0xB00000 - 0x14FFFFF 为内核的代码 10MB
-    ; 0x14FFFFF - 2G 数据空间
+    ; 0xB00000 - 0x6efffff 为内核的代码 100MB
+    ; 0x6efffff - 2G 数据空间
+    ; push 0x05
+    ; push 0xB00000
+    ; push 0xc8 ; 200
+    ; call ReadDiskFn
+    ; add esp, 0x0c
     push 0x05
     push 0xB00000
-    push 0xc8 ; 200
-    call ReadDiskFn
-    add esp, 0xc0
+    push 0x50 ; 0x50 -> 80块 10MB ; 0x190 -> 400 块 50MB
+    call ReadBlocksFn
+    add esp, 0x0c
     ; pop eax
     ; pop eax
     ; pop eax
     jmp dword CODE_SELECTOR:0xB00000
 
+; 由于端口一次性只能读取 256 个扇区，所以需要建 256 个扇区作为一个块来读
+ReadBlocksFn:
+    mov ecx, [esp + 4] ; 读取的块数
+    .ReadNextBlocFn:
+        ; 计算起始的扇区号
+        mov eax, [esp + 12]
+        mov ebx, [esp + 4]
+        ; xchg bx, bx
+        cmp ebx, ecx
+        jz .BreakFn
+        add eax, 0x100
+        mov [esp + 12], eax
+        .BreakFn:
+        push eax
+        ; 计算读取数据到目标的内存地址
+        mov eax, [esp + 12] ; 因为前面又push的参数，所以加12
+        cmp ebx, ecx
+        jz .BreakTwoFn
+        add eax, 0x20000 ; eax + 512*256
+        mov [esp + 12], eax
+        .BreakTwoFn:
+        push eax
+        ; 计算读取的扇区数
+        push 0x100
+        call ReadDiskFn
+        add esp, 0x0c
+        loop .ReadNextBlocFn
+    ret
+
 ; 磁盘读取代码
 ReadDiskFn:
-    mov ebx, [esp + 8] ; 读取数据到目标的内存地址
-    mov ecx, [esp + 4] ; 读取的扇区数
+    push ecx
+    ; xchg bx, bx
+    mov ebx, [esp + 12] ; 读取数据到目标的内存地址
+    mov ecx, [esp + 8] ; 读取的扇区数
 
     ; 设置读写扇区的数量
     mov dx, 0x1f2
     mov al, cl
     out dx, al
 
-    mov eax, [esp + 12] ; 读取的起始扇区编号
+    mov eax, [esp + 16] ; 读取的起始扇区编号
 
     inc dx; 0x1f3 起始扇区的前八位
     out dx, al
@@ -114,6 +150,8 @@ ReadDiskFn:
         call .readsFn
         pop ecx
         loop .ReadFn
+    pop ecx
+    ; xchg bx, bx
     ret
 
     .WaitsFn:
@@ -138,7 +176,7 @@ ReadDiskFn:
             jmp $+2
             mov [ebx], ax
             add ebx, 2
-            cmp cx, 0
+            ; cmp cx, 0
             loop .ReadWordFn
         ret
 
