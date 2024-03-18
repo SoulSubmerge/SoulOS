@@ -516,6 +516,7 @@ int consoleWrite(ConsoleData *_con, char *buf, uint32 count)
     while (nr++ < count)
     {
         ch = *buf++;
+
         switch (_con->state)
         {
         case STATE_NOR:

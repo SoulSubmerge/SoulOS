@@ -64,7 +64,7 @@ ProtectMode:
     ; 读取内核代码
     ; 0x100000 - 0xAFFFFF 为内核的栈空间 10MB
     ; 0xB00000 - 0x6efffff 为内核的代码 100MB
-    ; 0x6efffff - 2G 数据空间
+    ; 0x6f00000 - 2G 数据空间
     ; push 0x05
     ; push 0xB00000
     ; push 0xc8 ; 200

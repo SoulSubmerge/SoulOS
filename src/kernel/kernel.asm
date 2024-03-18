@@ -4,6 +4,7 @@ extern kernelInit
 
 global _start
 _start:
-    mov byte [0xB8000], 'A'
+    mov esp, 0xAFFFFF
     call kernelInit
+    int 0x08
     jmp $

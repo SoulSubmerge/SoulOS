@@ -4,20 +4,56 @@
 #include <kernel/console.h>
 #include <kernel/printk.h>
 #include <kernel/debug.h>
+#include <kernel/gdt.h>
+#include <kernel/assert.h>
+#include <kernel/task.h>
+#include <kernel/interrupt.h>
+#include <lib/stdlib.h>
 
+// extern "C"{ void * __dso_handle = 0 ;}
+// extern "C"{ void * __cxa_atexit = 0 ;}
 const unsigned int magic = SOUL_MAGIC;
 char message[1024] = "Hello SoulOS C++...";
 char buf[1024];
+
+Gdt gdt;
+uint64 interruptCount = 0;
+
+void testInterrupt(int32 _vector)
+{
+    printk("This is test interrupt. [ %d ]\n", interruptCount++);
+    sendEoi(_vector);
+}
+
 
 extern "C" void kernelInit()
 {
     consoleInit();
     for(int i = 0;i < 100; i++)
     {
-        printk("[TEST context] : %s (%d)\n", message, i+1);
+        printk("A[TEST context] : %s (%d)\n", message, i+1);
+
     }
-    BREAK_POINT;
+    printk("gdt size: %d\n", sizeof(GDT_DESCRIPTOR));
     DEBUGK("debug soulos!!!\n");
+    gdt.init();
+    DEBUGK("ok!!!\n");
+    // BREAK_POINT;
+    interruptInit();
+    setInterruptHandler(0, (void*)testInterrupt);
+    // taskInit();
+    // asm volatile(
+    //     "sti\n"
+    //     "movl %eax, %eax\n");
+    setInterruptStateTrue();
+
+    uint64 counter = 0;
+    while (true)
+    {
+        DEBUGK("looping in kernel init %d...\n", counter++);
+        delay(1000000);
+    }
+    // assert(3 > 5, "error error error");
 }
 
 // 输入输出 √
@@ -27,13 +63,13 @@ extern "C" void kernelInit()
 // printk √
 // 断言 √
 // 调试 √
-// 内核的全局描述符表
-// 任务及上下文
-// 中断函数
-// 中断描述符
-// 异常处理
-// 外中断
-// 中断上下文
+// 内核的全局描述符表 √
+// 任务及上下文 √
+// 中断函数 √
+// 中断描述符 √
+// 异常处理 √
+// 外中断 √
+// 中断上下文 √
 // 计数器和时钟
 // 蜂鸣器
 // 时间

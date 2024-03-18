@@ -67,7 +67,13 @@ $(BUILD_KERNEL_DIR)/kernel_temp.bin: $(BUILD_KERNEL_DIR)/kernel.o \
 	$(BUILD_LIB_DIR)/stdio.o \
 	$(BUILD_KERNEL_DIR)/assert.o \
 	$(BUILD_KERNEL_DIR)/printk.o \
-	$(BUILD_KERNEL_DIR)/debug.o
+	$(BUILD_KERNEL_DIR)/debug.o \
+	$(BUILD_KERNEL_DIR)/gdt.o \
+	$(BUILD_KERNEL_DIR)/taskSwitch.o \
+	$(BUILD_KERNEL_DIR)/task.o \
+	$(BUILD_KERNEL_DIR)/interrupt.o \
+	$(BUILD_KERNEL_DIR)/interruptHandler.o \
+	$(BUILD_LIB_DIR)/stdlib.o
 	ld -m elf_i386 -static $^ -o $@ -Ttext $(ENTRY_POINT)
 
 

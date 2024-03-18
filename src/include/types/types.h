@@ -1,6 +1,9 @@
 #ifndef SOUL_TYPES_H
 #define SOUL_TYPES_H
 
+// 用于省略函数的栈帧
+#define _ofp __attribute__((optimize("omit-frame-pointer")))
+
 typedef char int8;
 typedef short int16;
 typedef int int32;

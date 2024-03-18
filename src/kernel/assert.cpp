@@ -14,14 +14,15 @@ static void spin(const char *name)
         ;
 }
 
-void assertionFailure(char const *exp, char const *file, char const *base, int line)
+void assertionFailure(const char *exp, const char *file, const char *base, int line, const char *msg)
 {
     printk(
         "\n--> assert(%s) failed!!!\n"
-        "--> file: %s \n"
-        "--> base: %s \n"
-        "--> line: %d \n",
-        exp, file, base, line);
+        "[ file ] : %s \n"
+        "[ base ] : %s \n"
+        "[ line ] : %d \n"
+        "[ err  ] : %s \n",
+        exp, file, base, line, msg);
 
     spin("assertion_failure()");
 
