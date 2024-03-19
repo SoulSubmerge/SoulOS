@@ -13,11 +13,15 @@
 // extern "C"{ void * __dso_handle = 0 ;}
 // extern "C"{ void * __cxa_atexit = 0 ;}
 const unsigned int magic = SOUL_MAGIC;
-char message[1024] = "Hello SoulOS C++...";
-char buf[1024];
 
-Gdt gdt;
+Gdt gdt; // 全局描述符表
 uint64 interruptCount = 0;
+
+extern void consoleInit(); // 初始化控制台函数
+extern void interruptInit(); // 初始化中断和异常函数
+extern void clockInit(); // 初始化时钟相关函数
+extern void timeInit(); // 初始化系统时间
+extern void rtcInit(); // 时钟中断初始化函数
 
 void testInterrupt(int32 _vector)
 {
@@ -29,31 +33,24 @@ void testInterrupt(int32 _vector)
 extern "C" void kernelInit()
 {
     consoleInit();
-    for(int i = 0;i < 100; i++)
-    {
-        printk("A[TEST context] : %s (%d)\n", message, i+1);
-
-    }
-    printk("gdt size: %d\n", sizeof(GDT_DESCRIPTOR));
-    DEBUGK("debug soulos!!!\n");
     gdt.init();
-    DEBUGK("ok!!!\n");
-    // BREAK_POINT;
     interruptInit();
-    setInterruptHandler(0, (void*)testInterrupt);
+    // clockInit();
+    timeInit();
+    rtcInit();
+    setInterruptStateTrue();
+    // setInterruptHandler(0, (void*)testInterrupt);
     // taskInit();
     // asm volatile(
     //     "sti\n"
     //     "movl %eax, %eax\n");
-    setInterruptStateTrue();
 
-    uint64 counter = 0;
-    while (true)
-    {
-        DEBUGK("looping in kernel init %d...\n", counter++);
-        delay(1000000);
-    }
-    // assert(3 > 5, "error error error");
+    // uint64 counter = 0;
+    // while (true)
+    // {
+    //     DEBUGK("looping in kernel init %d...\n", counter++);
+    //     delay(1000000);
+    // }
 }
 
 // 输入输出 √
@@ -70,10 +67,10 @@ extern "C" void kernelInit()
 // 异常处理 √
 // 外中断 √
 // 中断上下文 √
-// 计数器和时钟
-// 蜂鸣器
-// 时间
-// 实时时钟
+// 计数器和时钟 √
+// 蜂鸣器 √
+// 时间 √
+// 实时时钟 √
 // 内存管理
 // 物理内存管理
 // 内核内存映射

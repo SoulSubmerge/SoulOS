@@ -162,7 +162,7 @@ void picInit()
     outByte(PIC_S_DATA, 2);          // ICW3: 设置从片连接到主片的 IR2 引脚
     outByte(PIC_S_DATA, 0b00000001); // ICW4: 8086模式, 正常EOI
 
-    outByte(PIC_M_DATA, 0b11111110); // 关闭所有中断
+    outByte(PIC_M_DATA, 0b11111111); // 关闭所有中断
     outByte(PIC_S_DATA, 0b11111111); // 关闭所有中断
 }
 

@@ -16,6 +16,8 @@ typedef unsigned long long uint64;
 
 typedef unsigned long long size_t;
 
+typedef unsigned int time_t;
+
 #define UINT32_MAX 4294967295
 #define UINT64_MAX 18446744073709551615
 

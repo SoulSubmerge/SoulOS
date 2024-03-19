@@ -73,7 +73,10 @@ $(BUILD_KERNEL_DIR)/kernel_temp.bin: $(BUILD_KERNEL_DIR)/kernel.o \
 	$(BUILD_KERNEL_DIR)/task.o \
 	$(BUILD_KERNEL_DIR)/interrupt.o \
 	$(BUILD_KERNEL_DIR)/interruptHandler.o \
-	$(BUILD_LIB_DIR)/stdlib.o
+	$(BUILD_LIB_DIR)/stdlib.o \
+	$(BUILD_KERNEL_DIR)/clock.o \
+	$(BUILD_KERNEL_DIR)/rtc.o \
+	$(BUILD_KERNEL_DIR)/time.o
 	ld -m elf_i386 -static $^ -o $@ -Ttext $(ENTRY_POINT)
 
 
@@ -96,9 +99,13 @@ $(BUILD_DIR)/SoulOS.img: $(BUILD_BOOT_DIR)/boot.bin \
 	dd if=$(BUILD_BOOT_DIR)/kernelLoader.bin of=$@ bs=512 count=4 seek=1 conv=notrunc
 	dd if=$(BUILD_KERNEL_DIR)/kernel.bin of=$@ bs=512 count=102400 seek=5 conv=notrunc
 
-
+.PHONY: bochs
 bochs:
 	./debug-tools/bochs-2.7/bin/bochs -f ./bochsrc -q
+
+.PHONY: vmdk
+vmdk:
+	qemu-img convert -pO vmdk ./build/SoulOS.img ./build/SoulOS.vmdk
 
 .PHONY: clean
 clean:

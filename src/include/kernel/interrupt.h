@@ -80,10 +80,10 @@ void setExceptionHandler(uint32 _index, handleFunc _handler);
 
 // 设置中断处理函数
 void setInterruptHandler(uint32 _irq, handleFunc _handler);
+// 设置中断的屏蔽字（开启 or 关闭）
 void setInterruptMask(uint32 _irq, bool _enable);
 
 // 中断描述符初始化
-void interruptInit();
 void setInterruptState(bool _state); // 设置 IF 位
 
 // 汇编代码文件中做了实现
