@@ -4,6 +4,9 @@
 #include <kernel/assert.h>
 #include <kernel/interrupt.h>
 #include <kernel/debug.h>
+#include <kernel/task.h>
+#include <kernel/kernel.h>
+#include <kernel/printk.h>
 
 uint32 volatile jiffies = 0;
 uint32 jiffy = JIFFY;
@@ -32,28 +35,24 @@ void stopBeep()
     }
 }
 
-void clock_handler(int vector)
+void clockHandler(int vector)
 {
     assert(vector == 0x20, "The clock interrupt number is incorrect.");
     sendEoi(vector); // 发送中断处理结束
-    jiffies++;
-    DEBUGK("clock jiffies %d ...\n", jiffies);
-    if (jiffies % 200 == 0)
-    {
-        startBeep();
-    }
     stopBeep();
-    // timer_wakeup();
+    jiffies++;
+    // DEBUGK("clock jiffies %d ...\n", jiffies);
+    TASK_INFO *task = runningTask();
+    // printk("magic: %p address: %p", task->magic, task);
+    assert(task->magic == SOUL_MAGIC, "Task page stack overflow causes task PCB information to be damaged.");
 
-    // task_t *task = runningTask();
-    // assert(task->magic == ONIX_MAGIC);
-
-    // task->jiffies = jiffies;
-    // task->ticks--;
-    // if (!task->ticks)
-    // {
-    //     schedule();
-    // }
+    task->jiffies = jiffies;
+    task->ticks--;
+    if (!task->ticks)
+    {
+        task->ticks = task->priority;
+        schedule();
+    }
 }
 
 void pitInit()
@@ -72,6 +71,6 @@ void pitInit()
 void clockInit()
 {
     pitInit();
-    setInterruptHandler(IRQ_CLOCK, (void*)clock_handler);
+    setInterruptHandler(IRQ_CLOCK, (void*)clockHandler);
     setInterruptMask(IRQ_CLOCK, true);
 }

@@ -14,43 +14,38 @@
 // extern "C"{ void * __cxa_atexit = 0 ;}
 const unsigned int magic = SOUL_MAGIC;
 
-Gdt gdt; // 全局描述符表
+
 uint64 interruptCount = 0;
 
-extern void consoleInit(); // 初始化控制台函数
 extern void interruptInit(); // 初始化中断和异常函数
 extern void clockInit(); // 初始化时钟相关函数
 extern void timeInit(); // 初始化系统时间
 extern void rtcInit(); // 时钟中断初始化函数
+extern void memoryMapInit(); // 内存页初始化函数
+extern void mappingInit(); // 内存映射初始化函数
+
+extern void memoryTest();
 
 void testInterrupt(int32 _vector)
 {
     printk("This is test interrupt. [ %d ]\n", interruptCount++);
     sendEoi(_vector);
+    // int cc = 0;
+    // testInterrupt(26);
 }
 
 
 extern "C" void kernelInit()
 {
-    consoleInit();
-    gdt.init();
+    memoryMapInit();
+    mappingInit();
     interruptInit();
-    // clockInit();
-    timeInit();
-    rtcInit();
+    taskInit();
+    clockInit();
+    // timeInit();
+    // rtcInit();
     setInterruptStateTrue();
-    // setInterruptHandler(0, (void*)testInterrupt);
-    // taskInit();
-    // asm volatile(
-    //     "sti\n"
-    //     "movl %eax, %eax\n");
-
-    // uint64 counter = 0;
-    // while (true)
-    // {
-    //     DEBUGK("looping in kernel init %d...\n", counter++);
-    //     delay(1000000);
-    // }
+    return;
 }
 
 // 输入输出 √
@@ -71,14 +66,13 @@ extern "C" void kernelInit()
 // 蜂鸣器 √
 // 时间 √
 // 实时时钟 √
-// 内存管理
-// 物理内存管理
-// 内核内存映射
-// 数据结构位图
-// 内核虚拟内存管理
-// 外中断控制
-// 创建内核线程
-// === === ===
+// 内存管理 √
+// 物理内存管理 √
+// 内核内存映射 √
+// 数据结构位图 √
+// 内核虚拟内存管理 √
+// 外中断控制 √
+// 创建内核线程 √
 // 系统调用
 // 系统调用 yield
 // 数据结构链表

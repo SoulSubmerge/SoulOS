@@ -27,13 +27,13 @@ CFLAGS:=$(strip ${CFLAGS})
 DEBUG:= -g
 INCLUDE:= -I$(SRC_DIR)/include
 
-all: $(BUILD_DIR)/SoulOS.img
+all: $(BUILD_DIR)/SoulOS.img vmdk
 
-$(BUILD_BOOT_DIR)/%.bin: $(SRC_BOOT_DIR)/%.asm
+$(BUILD_BOOT_DIR)/%_asm.bin: $(SRC_BOOT_DIR)/%.asm
 	$(shell mkdir -p $(dir $@))
 	nasm -f bin $< -o $@
 
-$(BUILD_KERNEL_DIR)/%.o: $(SRC_KERNEL_DIR)/%.asm
+$(BUILD_KERNEL_DIR)/%_asm.o: $(SRC_KERNEL_DIR)/%.asm
 	$(shell mkdir -p $(dir $@))
 	nasm -f elf32 $< -o $@
 
@@ -58,25 +58,30 @@ $(BUILD_TYPES_DIR)/%.o: $(SRC_TYPES_DIR)/%.cpp
 	g++ $(CFLAGS) $(DEBUG) $(INCLUDE) -c $< -o $@
 
 
-$(BUILD_KERNEL_DIR)/kernel_temp.bin: $(BUILD_KERNEL_DIR)/kernel.o \
+$(BUILD_KERNEL_DIR)/kernel_temp.bin: $(BUILD_KERNEL_DIR)/kernel_asm.o \
 	$(BUILD_KERNEL_DIR)/main.o \
-	$(BUILD_IO_DIR)/io_asm.o \
-	$(BUILD_IO_DIR)/cursor.o \
-	$(BUILD_LIB_DIR)/charArray.o \
 	$(BUILD_KERNEL_DIR)/console.o \
-	$(BUILD_LIB_DIR)/stdio.o \
 	$(BUILD_KERNEL_DIR)/assert.o \
 	$(BUILD_KERNEL_DIR)/printk.o \
 	$(BUILD_KERNEL_DIR)/debug.o \
 	$(BUILD_KERNEL_DIR)/gdt.o \
-	$(BUILD_KERNEL_DIR)/taskSwitch.o \
+	$(BUILD_KERNEL_DIR)/taskSwitch_asm.o \
 	$(BUILD_KERNEL_DIR)/task.o \
 	$(BUILD_KERNEL_DIR)/interrupt.o \
-	$(BUILD_KERNEL_DIR)/interruptHandler.o \
-	$(BUILD_LIB_DIR)/stdlib.o \
+	$(BUILD_KERNEL_DIR)/interruptHandler_asm.o \
 	$(BUILD_KERNEL_DIR)/clock.o \
 	$(BUILD_KERNEL_DIR)/rtc.o \
-	$(BUILD_KERNEL_DIR)/time.o
+	$(BUILD_KERNEL_DIR)/time.o \
+	$(BUILD_KERNEL_DIR)/logk.o \
+	$(BUILD_KERNEL_DIR)/memory.o \
+	$(BUILD_KERNEL_DIR)/memory_asm.o \
+	$(BUILD_IO_DIR)/io_asm.o \
+	$(BUILD_IO_DIR)/cursor.o \
+	$(BUILD_LIB_DIR)/stdlib.o \
+	$(BUILD_LIB_DIR)/stdio.o \
+	$(BUILD_LIB_DIR)/charArray.o \
+	$(BUILD_LIB_DIR)/errno.o \
+	$(BUILD_LIB_DIR)/bitmap.o
 	ld -m elf_i386 -static $^ -o $@ -Ttext $(ENTRY_POINT)
 
 
@@ -89,14 +94,14 @@ $(BUILD_KERNEL_DIR)/kernel.map: $(BUILD_KERNEL_DIR)/kernel_temp.bin
 
 
 
-$(BUILD_DIR)/SoulOS.img: $(BUILD_BOOT_DIR)/boot.bin \
-	$(BUILD_BOOT_DIR)/kernelLoader.bin \
+$(BUILD_DIR)/SoulOS.img: $(BUILD_BOOT_DIR)/boot_asm.bin \
+	$(BUILD_BOOT_DIR)/kernelLoader_asm.bin \
 	$(BUILD_KERNEL_DIR)/kernel.bin \
 	$(BUILD_KERNEL_DIR)/kernel_temp.bin \
 	$(BUILD_KERNEL_DIR)/kernel.map
 	yes | ./debug-tools/bochs-2.7/bin/bximage -q -hd=100 -func=create -sectsize=512 -imgmode=flat $@
-	dd if=$(BUILD_BOOT_DIR)/boot.bin of=$@ bs=512 count=1 conv=notrunc
-	dd if=$(BUILD_BOOT_DIR)/kernelLoader.bin of=$@ bs=512 count=4 seek=1 conv=notrunc
+	dd if=$(BUILD_BOOT_DIR)/boot_asm.bin of=$@ bs=512 count=1 conv=notrunc
+	dd if=$(BUILD_BOOT_DIR)/kernelLoader_asm.bin of=$@ bs=512 count=4 seek=1 conv=notrunc
 	dd if=$(BUILD_KERNEL_DIR)/kernel.bin of=$@ bs=512 count=102400 seek=5 conv=notrunc
 
 .PHONY: bochs

@@ -95,3 +95,9 @@ void Gdt::init()
     asm volatile(
         "ltr %%ax\n" ::"a"(KERNEL_TSS_SELECTOR));
 }
+
+static Gdt globalGdt;
+extern "C" void gdtInit()
+{
+    globalGdt.init();
+}

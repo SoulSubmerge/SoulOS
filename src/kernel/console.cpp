@@ -547,7 +547,7 @@ int consoleWrite(ConsoleData *_con, char *buf, uint32 count)
     return nr;
 }
 
-void consoleInit()
+extern "C" void consoleInit()
 {
     ConsoleData *_con = &consoleData;
     _con->mem_base = MEM_BASE;

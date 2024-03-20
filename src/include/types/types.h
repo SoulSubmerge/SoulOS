@@ -1,6 +1,8 @@
 #ifndef SOUL_TYPES_H
 #define SOUL_TYPES_H
 
+#include <lib/errno.h>
+
 // 用于省略函数的栈帧
 #define _ofp __attribute__((optimize("omit-frame-pointer")))
 
@@ -17,9 +19,12 @@ typedef unsigned long long uint64;
 typedef unsigned long long size_t;
 
 typedef unsigned int time_t;
+typedef unsigned int idx_t;
 
 #define UINT32_MAX 4294967295
 #define UINT64_MAX 18446744073709551615
+
+#define EOF -EEOF // END OF FILE
 
 #define EOS '\0' // 字符串结尾
 

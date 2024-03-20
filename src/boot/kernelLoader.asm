@@ -17,6 +17,35 @@ mov sp, 0x1000
 mov si, kernelLoadingMessage
 call PrintFn
 
+; 内存检测
+detectMemory:
+    ; 将 ebx 置为 0
+    xor ebx, ebx
+    ; es:di 结构体的缓存位置
+    mov ax, 0
+    mov es, ax
+    mov edi, ardsBuffer + 0x1000
+    mov edx, 0x534d4150; 固定签名
+
+.nextMemory:
+    ; 子功能号
+    mov eax, 0xe820
+    ; ards 结构的大小 (字节)
+    mov ecx, 20
+    ; 调用 0x15 系统调用
+    int 0x15
+    ; 如果 CF 置位，表示出错
+    jc error
+    ; 将缓存指针指向下一个结构体
+    add di, cx
+    ; 将结构体数量加一
+    inc dword [ardsCount]
+    cmp ebx, 0
+    jnz .nextMemory
+    mov si, detecting
+    call PrintFn
+    jmp PrepareProtectedMode
+
 ; 进入保护模式代码
 PrepareProtectedMode:
     cli ; 关闭中断
@@ -50,6 +79,15 @@ PrintFn:
 
 kernelLoadingMessage:
     db "The SoulOS kernel loader code is loaded.", 0x0a, 0x0d, 0x00 ; 
+detecting:
+    db "Detecting Memory Success...", 10, 13, 0; \n\r
+
+error:
+    mov si, .msg
+    call PrintFn
+    ; hlt; 让 CPU 停止
+    jmp $
+    .msg db "Loading Error!!!", 10, 13, 0
 
 [bits 32]
 ProtectMode:
@@ -72,12 +110,14 @@ ProtectMode:
     ; add esp, 0x0c
     push 0x05
     push 0xB00000
-    push 0x50 ; 0x50 -> 80块 10MB ; 0x190 -> 400 块 50MB
+    push 0x80 ; 0x80 -> 128块 16MB(内核固定16MB,需要提示内核大小需要修改memory.h的宏KERNEL_MEMORY_SIZE); 0x190 -> 400 块 50MB(最大)
     call ReadBlocksFn
     add esp, 0x0c
     ; pop eax
     ; pop eax
     ; pop eax
+    mov eax, 0x4F5DA2 ; 内核魔术，占个位，方便后期扩展用的，占时没什么用
+    mov ebx, ardsCount + 0x1000 ; 内存检测的结构数量指针
     jmp dword CODE_SELECTOR:0xB00000
 
 ; 由于端口一次性只能读取 256 个扇区，所以需要建 256 个扇区作为一个块来读
@@ -87,7 +127,6 @@ ReadBlocksFn:
         ; 计算起始的扇区号
         mov eax, [esp + 12]
         mov ebx, [esp + 4]
-        ; xchg bx, bx
         cmp ebx, ecx
         jz .BreakFn
         add eax, 0x100
@@ -112,7 +151,6 @@ ReadBlocksFn:
 ; 磁盘读取代码
 ReadDiskFn:
     push ecx
-    ; xchg bx, bx
     mov ebx, [esp + 12] ; 读取数据到目标的内存地址
     mov ecx, [esp + 8] ; 读取的扇区数
 
@@ -151,7 +189,6 @@ ReadDiskFn:
         pop ecx
         loop .ReadFn
     pop ecx
-    ; xchg bx, bx
     ret
 
     .WaitsFn:
@@ -214,3 +251,8 @@ gdtData:
     db 0b1_1_0_0_0000 | (MEMORY_LIMIT >> 16) & 0xf;
     db (MEMORY_BASE >> 24) & 0xff; 基地址 24 ~ 31 位
 gdtEnd:
+
+; 保存了内存块的数量
+ardsCount:
+    dd 0
+ardsBuffer: ; 内存检测结果的结构体
