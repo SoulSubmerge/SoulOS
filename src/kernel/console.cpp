@@ -1,6 +1,7 @@
 #include <kernel/console.h>
 #include <io/cursor.h>
 #include <lib/charArray.h>
+#include <kernel/interrupt.h>
 
 static ConsoleData consoleData;
 
@@ -513,6 +514,7 @@ int consoleWrite(ConsoleData *_con, char *buf, uint32 count)
 {
     char ch;
     int nr = 0;
+    bool intr = interruptDisable(); // 禁止中断
     while (nr++ < count)
     {
         ch = *buf++;
@@ -544,6 +546,7 @@ int consoleWrite(ConsoleData *_con, char *buf, uint32 count)
     }
     setCursor((uint16)((_con->pos - _con->mem_base) >> 1));
     // 恢复中断
+    setInterruptState(intr);
     return nr;
 }
 

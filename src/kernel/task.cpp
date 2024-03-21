@@ -7,6 +7,7 @@
 #include <kernel/interrupt.h>
 #include <kernel/kernel.h>
 #include <lib/charArray.h>
+#include <lib/syscall.h>
 
 extern BITMAP_T kernelMap;
 
@@ -14,7 +15,12 @@ extern "C" void* getRunningTaskEsp();
 extern "C" void taskSwitch(TASK_INFO *next);
 
 #define NR_TASKS 64
-static TASK_INFO *taskTable[NR_TASKS];
+extern uint32 volatile jiffies;
+extern uint32 jiffy;
+static TASK_INFO *taskTable[NR_TASKS]; // 任务表
+static LIST_T blockList; // 任务阻塞的链表
+static LIST_T  sleepList; // 任务睡眠链表
+static TASK_INFO *idleTask; // 空闲进程的任务，解决没有其它工作进程执行的情况
 
 // 从 task_table 里获得一个空闲的任务
 static TASK_INFO *getFreeTask()
@@ -53,7 +59,17 @@ static TASK_INFO *taskSearch(TASK_STATE_ENUM state)
             task = ptr;
     }
 
+    if(task == nullptr && state == TASK_READY)
+    {
+        task = idleTask; // 找到不其它就绪任务就把空闲进程扔给CPU处理
+    }
+
     return task;
+}
+
+void taskYield()
+{
+    schedule();
 }
 
 // 获取当前执行的任务的栈环境
@@ -66,6 +82,7 @@ TASK_INFO* runningTask()
 // 调度下一个任务
 void schedule()
 {
+    assert(!getInterruptState(), "Undisabled interrupt."); // 不可中断
     TASK_INFO *current = runningTask();
     TASK_INFO *next = taskSearch(TASK_READY);
 
@@ -75,6 +92,11 @@ void schedule()
     if (current->state == TASK_RUNNING)
     {
         current->state = TASK_READY;
+    }
+
+    if(!current->ticks)
+    {
+        current->ticks = current->priority;
     }
 
     next->state = TASK_RUNNING;
@@ -121,43 +143,118 @@ static void taskSetup()
     memset(taskTable, 0, sizeof(taskTable));
 }
 
-void thread_a()
+// 任务阻塞
+void taskBlock(TASK_INFO *task, LIST_T *blist, TASK_STATE_ENUM state)
 {
-    setInterruptStateTrue();
-    while (true)
+    assert(!getInterruptState(), "Undisabled interrupt.");
+    assert(task->node.next == nullptr, "The rear drive of the node to be inserted is not empty.");
+    assert(task->node.prev == nullptr, "The precursor of the node to be inserted is not empty.");
+
+    if (blist == nullptr)
     {
-        setInterruptStateFalse();
-        printk("A");
-        setInterruptStateTrue();
+        blist = &blockList;
+    }
+
+    listPush(blist, &task->node);
+
+    assert(state != TASK_READY && state != TASK_RUNNING, "The task status cannot be Executing or Ready.");
+
+    task->state = state;
+
+    TASK_INFO *current = runningTask();
+    if (current == task)
+    {
+        schedule();
     }
 }
 
-void thread_b()
+// 解除任务阻塞
+void taskUnblock(TASK_INFO *task)
 {
-    setInterruptStateTrue();
-    while (true)
+    assert(!getInterruptState(), "Undisabled interrupt.");
+
+    listRemove(&task->node);
+
+    assert(task->node.next == nullptr, "The rear drive of the node to be inserted is not empty.");
+    assert(task->node.prev == nullptr, "The precursor of the node to be inserted is not empty.");
+
+    task->state = TASK_READY;
+}
+
+void taskSleep(uint32 ms)
+{
+    assert(!getInterruptState(), "Undisabled interrupt."); // 不可中断
+
+    uint32 ticks = ms / jiffy;        // 需要睡眠的时间片
+    ticks = ticks > 0 ? ticks : 1; // 至少休眠一个时间片
+
+    // 记录目标全局时间片，在那个时刻需要唤醒任务
+    TASK_INFO *current = runningTask();
+    current->ticks = jiffies + ticks;
+    // printk("Sleep ticks: %d\n", jiffies);
+
+    // 从睡眠链表找到第一个比当前任务唤醒时间点更晚的任务，进行插入排序
+    LIST_T *list = &sleepList;
+    LIST_NODE_T *anchor = &list->tail;
+
+    for (LIST_NODE_T *ptr = list->head.next; ptr != &list->tail; ptr = ptr->next)
     {
-        setInterruptStateFalse();
-        printk("B");
-        setInterruptStateTrue();
+        TASK_INFO *task = ELEMENT_ENTRY(TASK_INFO, node, ptr);
+
+        if (task->ticks > current->ticks)
+        {
+            anchor = ptr;
+            break;
+        }
+    }
+
+    assert(current->node.next == nullptr, "The rear drive of the node to be inserted is not empty.");
+    assert(current->node.prev == nullptr, "The precursor of the node to be inserted is not empty.");
+
+    // 插入链表
+    listInsertBefore(anchor, &current->node);
+
+    // 阻塞状态是睡眠
+    current->state = TASK_SLEEPING;
+
+    // 调度执行其他任务
+    schedule();
+}
+
+void taskWakeup()
+{
+    assert(!getInterruptState(), "Undisabled interrupt."); // 不可中断
+
+    // 从睡眠链表中找到 ticks 小于等于 jiffies 的任务，恢复执行
+    LIST_T *list = &sleepList;
+    for (LIST_NODE_T *ptr = list->head.next; ptr != &list->tail;)
+    {
+        TASK_INFO *task = ELEMENT_ENTRY(TASK_INFO, node, ptr);
+        if (task->ticks > jiffies)
+        {
+            break;
+        }
+
+        // unblock 会将指针清空
+        ptr = ptr->next;
+
+        task->ticks = 0;
+        taskUnblock(task);
     }
 }
 
-void thread_c()
-{
-    setInterruptState(true);
-    while (true)
-    {
-        setInterruptStateFalse();
-        printk("C");
-        setInterruptStateTrue();
-    }
-}
+extern void idleThread(); // 空闲进程的线程任务
+extern void initThread(); // 初始化进程的线程任务
+
+extern void testThread();
 
 void taskInit()
 {
+    listInit(&blockList);
+    listInit(&sleepList);
     taskSetup();
-    taskCreate((target_t)thread_a, "a", 5, KERNEL_USER);
-    taskCreate((target_t)thread_b, "b", 5, KERNEL_USER);
-    taskCreate((target_t)thread_c, "c", 5, KERNEL_USER);
+    idleTask = taskCreate((target_t)idleThread,"idle",1,KERNEL_USER);
+    taskCreate((target_t)initThread, "init", 5, NORMAL_USER);
+    taskCreate((target_t)testThread, "test", 5, KERNEL_USER);
 }
+

@@ -185,26 +185,26 @@ void idtInit()
 
     for (uint32 i = 0; i < 0x20; i++)
     {
-        handlerTable[i] = (void*)exceptionHandler;
+        handlerTable[i] = (handleFunc)exceptionHandler;
     }
 
     // handlerTable[0xe] = (void*)pageFault;
 
     for (uint32 i = 0x20; i < ENTRY_SIZE; i++)
     {
-        handlerTable[i] = (void*)defaultHandler;
+        handlerTable[i] = defaultHandler;
     }
 
     // // 初始化系统调用
-    // IDT_DESCRIPTOR *tempIdtPtr = &globalIdt[0x80];
-    // tempIdtPtr->offsetLow = (uint32)syscallHandler & 0xffff;
-    // tempIdtPtr->offsetHigh = ((uint32)syscallHandler >> 16) & 0xffff;
-    // tempIdtPtr->codeSelector = 1 << 3; // 代码段
-    // tempIdtPtr->reserved = 0;      // 保留不用
-    // tempIdtPtr->type = 0b1110;     // 中断门
-    // tempIdtPtr->segment = 0;       // 系统段
-    // tempIdtPtr->DPL = 3;           // 用户态
-    // tempIdtPtr->present = 1;       // 有效
+    IDT_DESCRIPTOR *tempIdtPtr = &globalIdt[0x80];
+    tempIdtPtr->offsetLow = (uint32)syscallHandler & 0xffff;
+    tempIdtPtr->offsetHigh = ((uint32)syscallHandler >> 16) & 0xffff;
+    tempIdtPtr->codeSelector = 1 << 3; // 代码段
+    tempIdtPtr->reserved = 0;      // 保留不用
+    tempIdtPtr->type = 0b1110;     // 中断门
+    tempIdtPtr->segment = 0;       // 系统段
+    tempIdtPtr->DPL = 3;           // 用户态
+    tempIdtPtr->present = 1;       // 有效
 
     globalIdtPtr.basePtr = (uint32)globalIdt;
     globalIdtPtr.limit = sizeof(globalIdt) - 1;

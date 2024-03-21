@@ -3,7 +3,7 @@
 #include <types/types.h>
 #include <kernel/debug.h>
 
-#define GDT_SIZE 64
+#define GDT_SIZE 128
 
 #define KERNEL_CODE_INDEX 1
 #define KERNEL_DATA_INDEX 2
@@ -94,7 +94,7 @@ typedef struct tss_t
 #pragma pack()
 class Gdt
 {
-private:
+public:
     GDT_DESCRIPTOR m_gdt[GDT_SIZE];
     GDT_POINTER m_gdtPtr;
     TSS_T m_tss;
@@ -114,6 +114,7 @@ public:
 
 private:
     void setMemory(uint16 _index, uint32 _base, uint32 _limit);
+    // void descriptorInit(gdt_descriptor *desc, uint32 base, uint32 limit);
 
 public:
     void init();

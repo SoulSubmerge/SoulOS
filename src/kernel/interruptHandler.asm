@@ -39,7 +39,6 @@ interruptExitFn:
 
     ; 对应 push eax，调用结束恢复栈
     add esp, 4
-
     ; 调用信号处理函数
     ; call taskSignal
 
@@ -175,9 +174,9 @@ syscallHandler:
 
     ; 验证系统调用号
     push eax
-    ; call syscallCheck
-    add esp, 4
-
+    call syscallCheck
+    ; add esp, 4
+    pop eax
     push 0x20222202
 
     push 0x80
@@ -187,24 +186,21 @@ syscallHandler:
     push es
     push fs
     push gs
-    pusha
+    pushad
 
     push 0x80; 向中断处理函数传递参数中断向量 vector
-    ; xchg bx, bx
 
-    push ebp; 第六个参数
-    push edi; 第五个参数
-    push esi; 第四个参数
+
+    ; push ebp; 第六个参数
+    ; push edi; 第五个参数
+    ; push esi; 第四个参数
     push edx; 第三个参数
     push ecx; 第二个参数
     push ebx; 第一个参数
 
     ; 调用系统调用处理函数，syscall_table 中存储了系统调用处理函数的指针
-    ; call [syscallTable + eax * 4]
-
-    ; xchg bx, bx
-    add esp, (6 * 4); 系统调用结束恢复栈
-
+    call [syscallTable + eax * 4]
+    add esp, (3 * 4); 系统调用结束恢复栈
     ; 修改栈中 eax 寄存器，设置系统调用返回值
     mov dword [esp + 8 * 4], eax
 

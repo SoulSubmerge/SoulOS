@@ -6,6 +6,7 @@
 #include <lib/charArray.h>
 #include <lib/bitmap.h>
 #include <kernel/debug.h>
+#include <kernel/multiboot2.h>
 
 #ifdef SOUL_DEBUG
 #define USER_MEMORY true
@@ -49,14 +50,13 @@ static uint32 freePages = 0;  // 空闲内存页数
 extern "C"  void memoryInit(uint32 magic, uint32 addr)
 {
     uint32 count = 0;
-    MEM_ADDR_T *addrPtr = nullptr;
 
     // 如果是 onix loader 进入的内核
     if (magic == SOUL_MAGIC)
     {
         LOGK("Log address struct...%p\n", addr);
         count = *(uint32*)addr;
-        addrPtr = (MEM_ADDR_T *)(addr + 4);
+        MEM_ADDR_T *addrPtr = (MEM_ADDR_T *)(addr + 4);
         for (uint32 i = 0; i < count; i++, addrPtr++)
         {
             LOGK("Memory base 0x%p - 0x%p size 0x%p type %d\n",
@@ -66,6 +66,35 @@ extern "C"  void memoryInit(uint32 magic, uint32 addr)
                 memoryBase = (uint32)addrPtr->base;
                 memorySize = (uint32)addrPtr->size;
             }
+        }
+    }
+    else if(magic == MULTIBOOT2_MAGIC)
+    {
+        uint32 size = *(unsigned int *)addr;
+        multi_tag_t *tag = (multi_tag_t *)(addr + 8);
+
+        LOGK("Announced mbi size 0x%x\n", size);
+        while (tag->type != MULTIBOOT_TAG_TYPE_END)
+        {
+            if (tag->type == MULTIBOOT_TAG_TYPE_MMAP)
+                break;
+            // 下一个 tag 对齐到了 8 字节
+            tag = (multi_tag_t *)((uint32)tag + ((tag->size + 7) & ~7));
+        }
+
+        multi_tag_mmap_t *mtag = (multi_tag_mmap_t *)tag;
+        multi_mmap_entry_t *entry = mtag->entries;
+        while ((uint32)entry < (uint32)tag + tag->size)
+        {
+            LOGK("Memory base 0x%p size 0x%p type %d\n",
+                 (uint32)entry->addr, (uint32)entry->len, (uint32)entry->type);
+            count++;
+            if (entry->type == ZONE_VALID && entry->len > memorySize)
+            {
+                memoryBase = (uint32)entry->addr;
+                memorySize = (uint32)entry->len;
+            }
+            entry = (multi_mmap_entry_t *)((uint32)entry + mtag->entry_size);
         }
     }
     else

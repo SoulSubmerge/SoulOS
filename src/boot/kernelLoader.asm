@@ -118,7 +118,7 @@ ProtectMode:
     ; pop eax
     mov eax, 0x4F5DA2 ; 内核魔术，占个位，方便后期扩展用的，占时没什么用
     mov ebx, ardsCount + 0x1000 ; 内存检测的结构数量指针
-    jmp dword CODE_SELECTOR:0xB00000
+    jmp dword CODE_SELECTOR:0xB00040
 
 ; 由于端口一次性只能读取 256 个扇区，所以需要建 256 个扇区作为一个块来读
 ReadBlocksFn:

@@ -33,6 +33,7 @@ void Gdt::init()
     DEBUGK("gdt address: %p", &this->m_gdt[0]);
     DEBUGK("gdt_pointer address: %p", &this->m_gdtPtr);
     DEBUGK("tss address: %p", &this->m_tss);
+    memset(this->m_gdt, 0, sizeof(this->m_gdt));
     GDT_DESCRIPTOR *gdtDesPtr = nullptr;
     gdtDesPtr = &this->m_gdt[KERNEL_CODE_INDEX];
     this->setMemory(KERNEL_CODE_INDEX, 0, 0xFFFFF);
@@ -92,11 +93,12 @@ void Gdt::init()
     this->m_gdtPtr.limit = sizeof(this->m_gdt) - 1;
     asm volatile("lgdt %0\n" :: "m" (this->m_gdtPtr));
     DEBUGK("init gdt ok!!!\n");
-    asm volatile(
-        "ltr %%ax\n" ::"a"(KERNEL_TSS_SELECTOR));
+    // asm volatile(
+    //     "ltr %%ax\n" ::"a"(KERNEL_TSS_SELECTOR));
 }
 
 static Gdt globalGdt;
+GDT_POINTER &gdt_ptr = globalGdt.m_gdtPtr;
 extern "C" void gdtInit()
 {
     globalGdt.init();

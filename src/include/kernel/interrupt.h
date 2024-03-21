@@ -73,7 +73,7 @@ typedef struct idt_pointer
 #pragma pack()
 
 // 中断处理函数
-typedef void* handleFunc;
+typedef void (*handleFunc)(int32);
 
 void sendEoi(int32 _vector);
 void setExceptionHandler(uint32 _index, handleFunc _handler);

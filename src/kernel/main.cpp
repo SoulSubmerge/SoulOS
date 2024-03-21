@@ -9,7 +9,7 @@
 #include <kernel/task.h>
 #include <kernel/interrupt.h>
 #include <lib/stdlib.h>
-
+#include <kernel/logk.h>
 // extern "C"{ void * __dso_handle = 0 ;}
 // extern "C"{ void * __cxa_atexit = 0 ;}
 const unsigned int magic = SOUL_MAGIC;
@@ -23,8 +23,11 @@ extern void timeInit(); // 初始化系统时间
 extern void rtcInit(); // 时钟中断初始化函数
 extern void memoryMapInit(); // 内存页初始化函数
 extern void mappingInit(); // 内存映射初始化函数
+extern void syscallInit(); // 系统调用初始化函数
+extern void keyboardInit(); // 键盘中断初始化函数
 
 extern void memoryTest();
+extern void listTest();
 
 void testInterrupt(int32 _vector)
 {
@@ -42,9 +45,13 @@ extern "C" void kernelInit()
     interruptInit();
     taskInit();
     clockInit();
+    keyboardInit();
     // timeInit();
     // rtcInit();
+    syscallInit();
+    // listTest();
     setInterruptStateTrue();
+    LOGK("\n - - - Kernel initialization is complete. - - - \n");
     return;
 }
 

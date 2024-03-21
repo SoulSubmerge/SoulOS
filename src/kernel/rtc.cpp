@@ -99,7 +99,7 @@ void rtcInit()
     // 设置中断频率
     // outByte(CMOS_A, (inByte(CMOS_A) & 0xf) | 0b1110);
 
-    setInterruptHandler(IRQ_RTC, (void*)rtcHandler);
+    setInterruptHandler(IRQ_RTC, rtcHandler);
     setInterruptMask(IRQ_RTC, true);
     setInterruptMask(IRQ_CASCADE, true);
 }

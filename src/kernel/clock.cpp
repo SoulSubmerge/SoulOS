@@ -35,11 +35,15 @@ void stopBeep()
     }
 }
 
+extern void taskWakeup();
+
 void clockHandler(int vector)
 {
     assert(vector == 0x20, "The clock interrupt number is incorrect.");
     sendEoi(vector); // 发送中断处理结束
     stopBeep();
+    taskWakeup();
+
     jiffies++;
     // DEBUGK("clock jiffies %d ...\n", jiffies);
     TASK_INFO *task = runningTask();
@@ -50,7 +54,6 @@ void clockHandler(int vector)
     task->ticks--;
     if (!task->ticks)
     {
-        task->ticks = task->priority;
         schedule();
     }
 }
@@ -63,14 +66,14 @@ void pitInit()
     outByte(PIT_CHAN0_REG, (CLOCK_COUNTER >> 8) & 0xff);
 
     // 配置计数器 2 蜂鸣器
-    outByte(PIT_CTRL_REG, 0b10110110);
-    outByte(PIT_CHAN2_REG, (uint8)BEEP_COUNTER);
-    outByte(PIT_CHAN2_REG, (uint8)(BEEP_COUNTER >> 8));
+    // outByte(PIT_CTRL_REG, 0b10110110);
+    // outByte(PIT_CHAN2_REG, (uint8)BEEP_COUNTER);
+    // outByte(PIT_CHAN2_REG, (uint8)(BEEP_COUNTER >> 8));
 }
 
 void clockInit()
 {
     pitInit();
-    setInterruptHandler(IRQ_CLOCK, (void*)clockHandler);
+    setInterruptHandler(IRQ_CLOCK, clockHandler);
     setInterruptMask(IRQ_CLOCK, true);
 }
