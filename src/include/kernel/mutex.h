@@ -25,7 +25,7 @@ void mutexLock(mutex_t *mutex);   // 尝试持有互斥量
 void mutexUnlock(mutex_t *mutex); // 释放互斥量
 
 void lockInit(lock_t *lock);   // 锁初始化
-void LockAcquire(lock_t *lock);   // 加锁
+void lockAcquire(lock_t *lock);   // 加锁
 void lockRelease(lock_t *lock); // 解锁
 
 #endif

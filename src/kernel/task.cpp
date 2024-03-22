@@ -8,6 +8,7 @@
 #include <kernel/kernel.h>
 #include <lib/charArray.h>
 #include <lib/syscall.h>
+#include <kernel/gdt.h>
 
 extern BITMAP_T kernelMap;
 
@@ -21,6 +22,8 @@ static TASK_INFO *taskTable[NR_TASKS]; // 任务表
 static LIST_T blockList; // 任务阻塞的链表
 static LIST_T  sleepList; // 任务睡眠链表
 static TASK_INFO *idleTask; // 空闲进程的任务，解决没有其它工作进程执行的情况
+
+extern TSS_T m_tss;
 
 // 从 task_table 里获得一个空闲的任务
 static TASK_INFO *getFreeTask()
@@ -72,6 +75,17 @@ void taskYield()
     schedule();
 }
 
+// 激活任务
+void taskActivate(TASK_INFO *task)
+{
+    assert(task->magic == SOUL_MAGIC, "Task page stack overflow causes task PCB information to be damaged.");
+
+    if (task->uid != KERNEL_USER)
+    {
+        m_tss.esp0 = (uint32)task + PAGE_SIZE;
+    }
+}
+
 // 获取当前执行的任务的栈环境
 TASK_INFO* runningTask()
 {
@@ -103,6 +117,7 @@ void schedule()
     if (next == current)
         return;
 
+    taskActivate(next); // taskActivate 一定要在 taskSwitch 之前调用
     taskSwitch(next);
 }
 
@@ -133,6 +148,47 @@ static TASK_INFO *taskCreate(target_t target, const char *name, uint32 priority,
     printk("magic: %p address: %p\n", task->magic, task);
     // BREAK_POINT;
     return task;
+}
+
+// 调用该函数的地方不能有任何局部变量
+// 调用前栈顶需要准备足够的空间
+void taskToUserMode(target_t target)
+{
+    TASK_INFO *task = runningTask();
+
+    uint32 addr = (uint32)task + PAGE_SIZE;
+
+    addr -= sizeof(intr_frame_t);
+    intr_frame_t *iframe = (intr_frame_t *)(addr);
+
+    iframe->vector = 0x20;
+    iframe->edi = 1;
+    iframe->esi = 2;
+    iframe->ebp = 3;
+    iframe->esp_dummy = 4;
+    iframe->ebx = 5;
+    iframe->edx = 6;
+    iframe->ecx = 7;
+    iframe->eax = 8;
+
+    iframe->gs = 0;
+    iframe->ds = USER_DATA_SELECTOR;
+    iframe->es = USER_DATA_SELECTOR;
+    iframe->fs = USER_DATA_SELECTOR;
+    iframe->ss = USER_DATA_SELECTOR;
+    iframe->cs = USER_CODE_SELECTOR;
+
+    iframe->error = SOUL_MAGIC;
+
+    uint32 stack3 = allocKpage(1); // todo replace to user stack
+
+    iframe->eip = (uint32)target;
+    iframe->eflags = (0 << 12 | 0b10 | 1 << 9);
+    iframe->esp = stack3 + PAGE_SIZE;
+    // printk("esp-esp: %p %p %p\n", iframe->esp, iframe, target);
+    asm volatile(
+        "movl %0, %%esp\n"
+        "jmp interruptExitFn\n" ::"m"(iframe));
 }
 
 static void taskSetup()

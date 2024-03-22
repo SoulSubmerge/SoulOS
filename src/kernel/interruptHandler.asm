@@ -36,7 +36,6 @@ interruptEntryFn:
 
 global interruptExitFn
 interruptExitFn:
-
     ; 对应 push eax，调用结束恢复栈
     add esp, 4
     ; 调用信号处理函数

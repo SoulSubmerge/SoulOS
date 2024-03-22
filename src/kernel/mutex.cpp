@@ -70,7 +70,7 @@ void lockInit(lock_t *lock)
 }
 
 // 尝试持有锁
-void LockAcquire(lock_t *lock)
+void lockAcquire(lock_t *lock)
 {
     TASK_INFO *current = runningTask();
     if (lock->holder != current)

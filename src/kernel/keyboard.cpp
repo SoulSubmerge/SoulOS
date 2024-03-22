@@ -3,11 +3,17 @@
 #include <io/io.h>
 #include <kernel/interrupt.h>
 #include <kernel/logk.h>
+#include <lib/fifo.h>
+#include <kernel/mutex.h>
+#include <kernel/task.h>
 
 #define KEYBOARD_DATA_PORT 0x60
 #define KEYBOARD_CTRL_PORT 0x64
 #define INV 0 // 不可见字符
 #define CODE_PRINT_SCREEN_DOWN 0xB7
+
+#define KEYBOARD_CMD_LED 0xED // 设置 LED 状态
+#define KEYBOARD_CMD_ACK 0xFA // ACK
 
 
 static char keymap[][4] = {
@@ -127,6 +133,46 @@ static bool scrlock_state;  // 滚动锁定
 static bool numlock_state;  // 数字锁定
 static bool extcode_state;  // 扩展码状态
 
+static lock_t keyboardLock;    // 锁
+static TASK_INFO *waiter; // 等待输入的任务
+
+#define BUFFER_SIZE 1024        // 输入缓冲区大小
+static char keyboardBuf[BUFFER_SIZE]; // 输入缓冲区
+static fifo_t keyboardFifo;           // 循环队列
+
+
+static void keyboardWait()
+{
+    uint8 state;
+    do
+    {
+        state = inByte(KEYBOARD_CTRL_PORT);
+    } while (state & 0x02); // 读取键盘缓冲区，直到为空
+}
+
+static void keyboardAck()
+{
+    uint8 state;
+    do
+    {
+        state = inByte(KEYBOARD_DATA_PORT);
+    } while (state != KEYBOARD_CMD_ACK);
+}
+
+static void setLeds()
+{
+    uint8 leds = (capslock_state << 2) | (numlock_state << 1) | scrlock_state;
+    keyboardWait();
+    // 设置 LED 命令
+    outByte(KEYBOARD_DATA_PORT, KEYBOARD_CMD_LED);
+    keyboardAck();
+
+    keyboardWait();
+    // 设置 LED 灯状态
+    outByte(KEYBOARD_DATA_PORT, leds);
+    keyboardAck();
+}
+
 extern void keyboardInit();
 
 void keyboardHandler(int vector)
@@ -200,9 +246,14 @@ void keyboardHandler(int vector)
         led = true;
     }
 
+    if (led)
+    {
+        setLeds();
+    }
+
     // 计算 shift 状态
     bool shift = false;
-    if (capslock_state)
+    if (capslock_state  && ('a' <= keymap[makecode][0] <= 'z'))
     {
         shift = !shift;
     }
@@ -227,7 +278,30 @@ void keyboardHandler(int vector)
     if (ch == INV)
         return;
 
-    LOGK("keydown %c \n", ch);
+    // LOGK("keydown %c \n", ch);
+    fifoPut(&keyboardFifo, ch);
+    if (waiter != nullptr)
+    {
+        taskUnblock(waiter);
+        waiter = nullptr;
+    }
+}
+
+uint32 keyboardRead(char *buf, uint32 count)
+{
+    lockAcquire(&keyboardLock);
+    int nr = 0;
+    while (nr < count)
+    {
+        while (fifoEmpty(&keyboardFifo))
+        {
+            waiter = runningTask();
+            taskBlock(waiter, nullptr, TASK_WAITING);
+        }
+        buf[nr++] = fifoGet(&keyboardFifo);
+    }
+    lockRelease(&keyboardLock);
+    return count;
 }
 
 void keyboardInit()
@@ -236,6 +310,10 @@ void keyboardInit()
     scrlock_state = false;
     capslock_state = false;
     extcode_state = false;
+    fifoInit(&keyboardFifo, keyboardBuf, BUFFER_SIZE);
+    lockInit(&keyboardLock);
+    waiter = nullptr;
+    setLeds();
     setInterruptHandler(IRQ_KEYBOARD, keyboardHandler);
     setInterruptMask(IRQ_KEYBOARD, true);
 }

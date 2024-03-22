@@ -14,7 +14,7 @@
 // 一个任务的栈页大小 4k
 #define STACK_FRAME_SIZE 0x1000
 
-typedef void* target_t;
+typedef void (*target_t)(void);
 typedef void (*eipPtr)(void);
 typedef enum task_state_t
 {
@@ -51,6 +51,39 @@ typedef struct task_register_info
     eipPtr eip;
 }TASK_REGISTER_INFO;
 
+
+typedef struct intr_frame_t
+{
+    uint32 vector;
+
+    uint32 edi;
+    uint32 esi;
+    uint32 ebp;
+    // 虽然 pushad 把 esp 也压入，但 esp 是不断变化的，所以会被 popad 忽略
+    uint32 esp_dummy;
+
+    uint32 ebx;
+    uint32 edx;
+    uint32 ecx;
+    uint32 eax;
+
+    uint32 gs;
+    uint32 fs;
+    uint32 es;
+    uint32 ds;
+
+    uint32 vector0;
+
+    uint32 error;
+
+    uint32 eip;
+    uint32 cs;
+    uint32 eflags;
+    uint32 esp;
+    uint32 ss;
+}intr_frame_t;
+
+
 void taskInit();
 TASK_INFO* runningTask();
 void schedule();
@@ -60,5 +93,7 @@ void taskBlock(TASK_INFO *task, LIST_T *blist, TASK_STATE_ENUM state); // 任务
 void taskUnblock(TASK_INFO *task); // 解除阻塞，就绪
 void taskSleep(uint32 ms); // 睡眠
 void taskWakeup(); // 苏醒
+
+void taskToUserMode(target_t target);
 
 #endif

@@ -2,6 +2,8 @@
 #include <lib/syscall.h>
 #include <kernel/logk.h>
 #include <kernel/mutex.h>
+#include <kernel/task.h>
+#include <kernel/debug.h>
 
 void idleThread()
 {
@@ -18,16 +20,28 @@ void idleThread()
     }
 }
 
+// extern uint32 keyboardRead(char *buf, uint32 count);
+
+static void realInitThread()
+{
+    // BREAK_POINT;
+    // BREAK_POINT;
+    uint32 counter = 0;
+    char ch;
+    while (true)
+    {
+        BREAK_POINT;
+        // uint32 counter = 0;
+        // asm volatile("in $0x92, %ax\n");
+        sleep(100);
+    }
+}
 
 void initThread()
 {
 
-    setInterruptStateTrue();
-    while (true)
-    {
-        // LOGK("init task....\n");
-        sleep(500);
-    }
+    char temp[100]; // 为栈顶有足够的空间
+    taskToUserMode((target_t)realInitThread);
 }
 
 void testThread()
@@ -37,7 +51,8 @@ void testThread()
 
     while (true)
     {
-        // LOGK("test task %d....\n", counter++);
+        // BREAK_POINT;
+        LOGK("test task %d....\n", counter++);
         sleep(669);
     }
 }

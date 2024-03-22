@@ -21,7 +21,7 @@ extern consoleInit
 extern gdtInit
 extern memoryInit
 extern kernelInit
-extern gdt_ptr ; 内核的全局描述符指针
+extern m_gdtPtr ; 内核的全局描述符指针
 code_selector equ (1 << 3)
 data_selector equ (2 << 3)
 
@@ -33,8 +33,10 @@ _start:
     push eax; magic
     ; 内存检测的初始化函数
     call consoleInit
+    ; xchg bx, bx
     call gdtInit
-    ; lgdt [gdt_ptr]
+    ; xchg bx, bx
+    lgdt [m_gdtPtr]
     jmp dword code_selector:_next
 
 _next:

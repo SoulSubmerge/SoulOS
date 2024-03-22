@@ -47,7 +47,7 @@ void clockHandler(int vector)
     jiffies++;
     // DEBUGK("clock jiffies %d ...\n", jiffies);
     TASK_INFO *task = runningTask();
-    // printk("magic: %p address: %p", task->magic, task);
+    printk("magic: %p address: %p", task->magic, task);
     assert(task->magic == SOUL_MAGIC, "Task page stack overflow causes task PCB information to be damaged.");
 
     task->jiffies = jiffies;

@@ -90,33 +90,6 @@ typedef struct tss_t
     uint16 iobase;        // I/O 位图基地址，16 位从 TSS 到 IO 权限位图的偏移
     uint32 ssp;           // 任务影子栈指针
 }TSS_T;
-
 #pragma pack()
-class Gdt
-{
-public:
-    GDT_DESCRIPTOR m_gdt[GDT_SIZE];
-    GDT_POINTER m_gdtPtr;
-    TSS_T m_tss;
 
-public:
-    Gdt();
-    ~Gdt() = default;
-    static void operator delete(void* ptr)
-    {
-        DEBUGK("TEST DELETE");
-    }
-
-    static void* operator new(unsigned int size) {
-        DEBUGK("TEST NEW");
-        return (void*)0;
-    }
-
-private:
-    void setMemory(uint16 _index, uint32 _base, uint32 _limit);
-    // void descriptorInit(gdt_descriptor *desc, uint32 base, uint32 limit);
-
-public:
-    void init();
-};
 #endif

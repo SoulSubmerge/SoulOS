@@ -25,6 +25,7 @@ extern void memoryMapInit(); // 内存页初始化函数
 extern void mappingInit(); // 内存映射初始化函数
 extern void syscallInit(); // 系统调用初始化函数
 extern void keyboardInit(); // 键盘中断初始化函数
+extern void tssInit();
 
 extern void memoryTest();
 extern void listTest();
@@ -40,6 +41,7 @@ void testInterrupt(int32 _vector)
 
 extern "C" void kernelInit()
 {
+    tssInit();
     memoryMapInit();
     mappingInit();
     interruptInit();
@@ -80,19 +82,19 @@ extern "C" void kernelInit()
 // 内核虚拟内存管理 √
 // 外中断控制 √
 // 创建内核线程 √
-// 系统调用
-// 系统调用 yield
-// 数据结构链表
-// 任务阻塞和就绪
-// 基础任务
-// 任务睡眠和任务唤醒
-// 互斥和信号量
-// 锁
-// multiboot
-// 互斥锁
-// 键盘中断
-// 键盘驱动
-// 数据结构循环队列
+// 系统调用 √
+// 系统调用 yield √
+// 数据结构链表 √
+// 任务阻塞和就绪 √
+// 基础任务 √
+// 任务睡眠和任务唤醒 √
+// 互斥和信号量 √
+// 锁 √
+// multiboot √
+// 互斥锁 √
+// 键盘中断 √
+// 键盘驱动 √
+// 数据结构循环队列 √
 // 用户模式
 // 用户模式printf
 // 内核堆内存管理

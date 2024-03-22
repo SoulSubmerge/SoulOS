@@ -94,7 +94,8 @@ $(BUILD_KERNEL_DIR)/kernel_temp.bin: $(BUILD_KERNEL_DIR)/kernel_asm.o \
 	$(BUILD_LIB_DIR)/errno.o \
 	$(BUILD_LIB_DIR)/bitmap.o \
 	$(BUILD_LIB_DIR)/syscall.o \
-	$(BUILD_LIB_DIR)/list.o
+	$(BUILD_LIB_DIR)/list.o \
+	$(BUILD_LIB_DIR)/fifo.o
 	ld -m elf_i386 -static $^ -o $@ -Ttext $(ENTRY_POINT) --section-start=.multiboot2=$(MULTIBOOT2)
 
 
