@@ -510,7 +510,7 @@ static inline void stateCsi(ConsoleData *_con, char ch)
 }
 
 // 写控制台
-int consoleWrite(ConsoleData *_con, char *buf, uint32 count)
+int _consoleWrite(ConsoleData *_con, char *buf, uint32 count)
 {
     char ch;
     int nr = 0;
@@ -566,7 +566,7 @@ extern "C" void consoleInit()
     consoleClear(_con);
 }
 
-int testConsoleWrite(char *buf, uint32 count)
+int consoleWrite(char *buf, uint32 count)
 {
-    return consoleWrite(&consoleData, buf, count);
+    return _consoleWrite(&consoleData, buf, count);
 }

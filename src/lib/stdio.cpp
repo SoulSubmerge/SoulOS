@@ -1,6 +1,7 @@
 #include <types/args.h>
 #include <lib/charArray.h>
 #include <kernel/assert.h>
+#include <lib/syscall.h>
 
 #define ZEROPAD 0x01 // 填充零
 #define SIGN 0x02    // unsigned/signed long
@@ -12,6 +13,9 @@
 #define DOUBLE 0x80  // 浮点数
 
 #define is_digit(c) ((c) >= '0' && (c) <= '9')
+
+
+static char printfBuf[10240]; // printf 的缓冲区
 
 // 将字符数字串转换成整数，并将指针前移
 static int skipAtoi(const char **s)
@@ -446,5 +450,17 @@ int sprintf(char *buf, const char *fmt, ...)
     VAR_START_FN(args, fmt);
     int i = vsprintf(buf, fmt, args);
     VAR_END_FN(args);
+    return i;
+}
+
+
+int printf(const char *fmt, ...)
+{
+    var_list args;
+    int i;
+    VAR_START_FN(args, fmt);
+    i = vsprintf(printfBuf, fmt, args);
+    VAR_END_FN(args);
+    write(stdout, printfBuf, i);
     return i;
 }

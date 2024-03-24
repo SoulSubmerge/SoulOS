@@ -26,6 +26,7 @@ extern void mappingInit(); // 内存映射初始化函数
 extern void syscallInit(); // 系统调用初始化函数
 extern void keyboardInit(); // 键盘中断初始化函数
 extern void tssInit();
+extern void arenaInit();
 
 extern void memoryTest();
 extern void listTest();
@@ -44,6 +45,7 @@ extern "C" void kernelInit()
     tssInit();
     memoryMapInit();
     mappingInit();
+    arenaInit();
     interruptInit();
     taskInit();
     clockInit();
@@ -95,10 +97,10 @@ extern "C" void kernelInit()
 // 键盘中断 √
 // 键盘驱动 √
 // 数据结构循环队列 √
-// 用户模式
-// 用户模式printf
-// 内核堆内存管理
-// 用户内存映射
+// 用户模式 √
+// 用户模式printf √
+// 内核堆内存管理 √
+// 用户内存映射 √
 // 进程用户态栈
 // 系统调用 brk
 // 任务 ID

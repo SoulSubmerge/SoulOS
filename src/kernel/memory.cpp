@@ -7,6 +7,7 @@
 #include <lib/bitmap.h>
 #include <kernel/debug.h>
 #include <kernel/multiboot2.h>
+#include <kernel/task.h>
 
 #ifdef SOUL_DEBUG
 #define USER_MEMORY true
@@ -150,8 +151,8 @@ void memoryMapInit()
     LOGK("Total pages %d free pages %d\n", totalPages, freePages);
 
     // 初始化内核虚拟内存位图，需要 8 位对齐
-    // uint32 length = (IDX(KERNEL_RAMDISK_MEM) - IDX(MEMORY_BASE)) / 8;
-    uint32 length = (IDX(KERNEL_MEMORY_SIZE * sizeof(KERNEL_PAGE_TABLE)) - IDX(MEMORY_BASE)) / 8;;
+    uint32 length = (IDX(KERNEL_RAMDISK_MEM) - IDX(MEMORY_BASE)) / 8;
+    // uint32 length = (IDX(KERNEL_MEMORY_SIZE * sizeof(KERNEL_PAGE_TABLE)) - IDX(MEMORY_BASE)) / 8;;
     
     bitmapInit(&kernelMap, (char*)KERNEL_MAP_BITS, length, IDX(MEMORY_BASE));
     bitmapScan(&kernelMap, memoryMapPages);
@@ -273,24 +274,24 @@ static PAGE_ENTRY_T *getPde()
 // 获取虚拟地址 vaddr 对应的页表
 static PAGE_ENTRY_T *getPte(uint32 vaddr, bool create)
 {
-    // PAGE_ENTRY_T *pde = getPde();
-    // uint32 idx = DIDX(vaddr);
-    // PAGE_ENTRY_T *entry = &pde[idx];
+    PAGE_ENTRY_T *pde = getPde();
+    uint32 idx = DIDX(vaddr);
+    PAGE_ENTRY_T *entry = &pde[idx];
 
-    // assert(create || (!create && entry->present), "Accessing an illegal memory page.");
+    assert(create || (!create && entry->present), "Accessing an illegal memory page.");
 
-    // PAGE_ENTRY_T *table = (PAGE_ENTRY_T *)(PDE_MASK | (idx << 12));
+    PAGE_ENTRY_T *table = (PAGE_ENTRY_T *)(PDE_MASK | (idx << 12));
 
-    // if (!entry->present)
-    // {
-    //     LOGK("Get and create page table entry for 0x%p\n", vaddr);
-    //     uint32 page = getPage();
-    //     entryInit(entry, IDX(page));
-    //     memset(table, 0, PAGE_SIZE);
-    // }
-    // return table;
+    if (!entry->present)
+    {
+        LOGK("Get and create page table entry for 0x%p\n", vaddr);
+        uint32 page = getPage();
+        entryInit(entry, IDX(page));
+        memset(table, 0, PAGE_SIZE);
+    }
+    return table;
 
-     return (page_entry_t *)(PDE_MASK | (DIDX(vaddr) << 12));
+    // return (page_entry_t *)(PDE_MASK | (DIDX(vaddr) << 12));
 }
 
 // 从位图中扫描 count 个连续的页
@@ -354,4 +355,66 @@ void memoryTest()
     {
         freeKpage(pages[i], 1);
     }
+}
+
+// 将 vaddr 映射物理内存
+void linkPage(uint32 vaddr)
+{
+    ASSERT_PAGE(vaddr);
+
+    page_entry_t *pte = getPte(vaddr, true);
+    page_entry_t *entry = &pte[TIDX(vaddr)];
+
+    TASK_INFO *task = runningTask();
+    bitmap_t *map = task->vmap;
+    uint32 index = IDX(vaddr);
+
+    // 如果页面已存在，则直接返回
+    if (entry->present)
+    {
+        assert(bitmapTest(map, index), "Expect the memory page to exist, but it does not.");
+        return;
+    }
+
+    assert(!bitmapTest(map, index), "Expect the memory page not to exist, but it does not.");
+    bitmapSet(map, index, true);
+
+    uint32 paddr = getPage();
+    entryInit(entry, IDX(paddr));
+    flushTlb(vaddr);
+
+    LOGK("LINK from 0x%p to 0x%p\n", vaddr, paddr);
+}
+
+// 去掉 vaddr 对应的物理内存映射
+void unlinkPage(uint32 vaddr)
+{
+    ASSERT_PAGE(vaddr);
+
+    page_entry_t *pte = getPte(vaddr, true);
+    page_entry_t *entry = &pte[TIDX(vaddr)];
+
+    TASK_INFO *task = runningTask();
+    bitmap_t *map = task->vmap;
+    uint32 index = IDX(vaddr);
+
+    if (!entry->present)
+    {
+        assert(!bitmapTest(map, index), "Expect the memory page not to exist, but it does not.");
+        return;
+    }
+
+    assert(entry->present && bitmapTest(map, index), "Expect the memory page to exist, but it does not.");
+
+    entry->present = false;
+    bitmapSet(map, index, false);
+
+    uint32 paddr = PAGE(entry->index);
+
+    DEBUGK("UNLINK from 0x%p to 0x%p\n", vaddr, paddr);
+    if (memoryMap[entry->index] == 1)
+    {
+        putPage(paddr);
+    }
+    flushTlb(vaddr);
 }

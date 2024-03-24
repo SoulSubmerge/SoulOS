@@ -4,6 +4,8 @@
 #include <kernel/mutex.h>
 #include <kernel/task.h>
 #include <kernel/debug.h>
+#include <lib/stdio.h>
+#include <kernel/arena.h>
 
 void idleThread()
 {
@@ -22,18 +24,18 @@ void idleThread()
 
 // extern uint32 keyboardRead(char *buf, uint32 count);
 
-static void realInitThread()
+static void userInitThread()
 {
-    // BREAK_POINT;
-    // BREAK_POINT;
     uint32 counter = 0;
     char ch;
     while (true)
     {
-        BREAK_POINT;
+        // BREAK_POINT;
         // uint32 counter = 0;
         // asm volatile("in $0x92, %ax\n");
-        sleep(100);
+        test();
+        sleep(1000);
+        // printf("task is in user mode %d\n", counter++);
     }
 }
 
@@ -41,7 +43,7 @@ void initThread()
 {
 
     char temp[100]; // 为栈顶有足够的空间
-    taskToUserMode((target_t)realInitThread);
+    taskToUserMode((target_t)userInitThread);
 }
 
 void testThread()
@@ -51,8 +53,6 @@ void testThread()
 
     while (true)
     {
-        // BREAK_POINT;
-        LOGK("test task %d....\n", counter++);
-        sleep(669);
+        sleep(2000);
     }
 }

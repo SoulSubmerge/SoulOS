@@ -86,6 +86,7 @@ $(BUILD_KERNEL_DIR)/kernel_temp.bin: $(BUILD_KERNEL_DIR)/kernel_asm.o \
 	$(BUILD_KERNEL_DIR)/thread.o \
 	$(BUILD_KERNEL_DIR)/mutex.o \
 	$(BUILD_KERNEL_DIR)/keyboard.o \
+	$(BUILD_KERNEL_DIR)/arena.o \
 	$(BUILD_IO_DIR)/io_asm.o \
 	$(BUILD_IO_DIR)/cursor.o \
 	$(BUILD_LIB_DIR)/stdlib.o \

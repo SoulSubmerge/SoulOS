@@ -91,7 +91,7 @@ public:
     uint8 style;  // 当前样式
 };
 
-int testConsoleWrite(char *buf, uint32 count); // 占时用于调用显卡写入字符的
+int consoleWrite(char *buf, uint32 count); // 占时用于调用显卡写入字符的
 // void consoleClear();
 
 

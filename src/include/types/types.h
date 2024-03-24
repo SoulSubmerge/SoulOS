@@ -28,4 +28,12 @@ typedef unsigned int idx_t;
 
 #define EOS '\0' // 字符串结尾
 
+typedef int32 fd_t;
+typedef enum std_fd_t
+{
+    stdin,
+    stdout,
+    stderr,
+} std_fd_t;
+
 #endif

@@ -14,7 +14,7 @@ int printk(const char *fmt, ...)
     VAR_END_FN(args);
     // device_t *device = device_find(DEV_CONSOLE, 0);
     // device_write(device->dev, buf, i, 0, 0);
-    testConsoleWrite(buf,i);
+    consoleWrite(buf,i);
 
     return i;
 }

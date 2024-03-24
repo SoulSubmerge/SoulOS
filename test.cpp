@@ -3,9 +3,8 @@
 
 int main()
 {
-    std::cout << (char)27 << std::endl;
-    std::cout << "a" << std::endl;
-    std::cout << "a" << std::endl;
-    std::cout << "a" << std::endl;
+    void *ptr = (void*)0x1000;
+    unsigned int a = 0x100;
+    std::cout << ptr + a << std::endl;
     return 0;
 }

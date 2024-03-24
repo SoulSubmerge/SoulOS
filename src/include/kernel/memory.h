@@ -24,7 +24,7 @@
 #define USER_MMAP_SIZE 0x8000000
 
 // 用户栈顶地址 256M
-#define USER_STACK_TOP 0x10000000
+#define USER_STACK_TOP 0x9000000 //(目前是 128MB大小) // 0x10000000
 
 // 用户栈最大 2M
 #define USER_STACK_SIZE 0x200000
@@ -70,5 +70,11 @@ extern "C" void flushTlb(uint32 vaddr); // 刷新块表
 
 uint32 allocKpage(uint32 count); // 分配 count 个连续的内核页
 void freeKpage(uint32 vaddr, uint32 count); // 释放 count 个连续的内核页
+
+// 将 vaddr 映射物理内存
+void linkPage(uint32 vaddr);
+
+// 去掉 vaddr 对应的物理内存映射
+void unlinkPage(uint32 vaddr);
 
 #endif

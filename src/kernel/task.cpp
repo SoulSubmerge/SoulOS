@@ -9,6 +9,7 @@
 #include <lib/charArray.h>
 #include <lib/syscall.h>
 #include <kernel/gdt.h>
+#include <kernel/arena.h>
 
 extern BITMAP_T kernelMap;
 
@@ -145,7 +146,6 @@ static TASK_INFO *taskCreate(target_t target, const char *name, uint32 priority,
     task->vmap = &kernelMap;
     task->pde = KERNEL_PAGE_DIR;
     task->magic = SOUL_MAGIC;
-    printk("magic: %p address: %p\n", task->magic, task);
     // BREAK_POINT;
     return task;
 }
@@ -155,6 +155,10 @@ static TASK_INFO *taskCreate(target_t target, const char *name, uint32 priority,
 void taskToUserMode(target_t target)
 {
     TASK_INFO *task = runningTask();
+
+    task->vmap = (BITMAP_T*)kmalloc(sizeof(bitmap_t)); // todo kfree
+    void *buf = (void *)allocKpage(1);     // todo free_kpage
+    bitmapInit(task->vmap, (char*)buf, PAGE_SIZE, KERNEL_MEMORY_SIZE / PAGE_SIZE);
 
     uint32 addr = (uint32)task + PAGE_SIZE;
 
