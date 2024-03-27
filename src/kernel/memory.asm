@@ -5,10 +5,12 @@ section .text
 global getCr2
 getCr2:
     mov eax, cr2
+    ret
 
 global getCr3
 getCr3:
     mov eax, cr3
+    ret
 
 global _setCr3
 _setCr3:

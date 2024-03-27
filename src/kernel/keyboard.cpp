@@ -134,7 +134,7 @@ static bool numlock_state;  // 数字锁定
 static bool extcode_state;  // 扩展码状态
 
 static lock_t keyboardLock;    // 锁
-static TASK_INFO *waiter; // 等待输入的任务
+static task_t *waiter; // 等待输入的任务
 
 #define BUFFER_SIZE 1024        // 输入缓冲区大小
 static char keyboardBuf[BUFFER_SIZE]; // 输入缓冲区
@@ -296,7 +296,7 @@ uint32 keyboardRead(char *buf, uint32 count)
         while (fifoEmpty(&keyboardFifo))
         {
             waiter = runningTask();
-            taskBlock(waiter, nullptr, TASK_WAITING);
+            taskBlock(waiter, nullptr, TASK_BLOCKED);
         }
         buf[nr++] = fifoGet(&keyboardFifo);
     }

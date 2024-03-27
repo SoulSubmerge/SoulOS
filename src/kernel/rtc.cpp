@@ -21,7 +21,7 @@
 
 void setAlarm(uint32 secs)
 {
-    TM_INFO time;
+    tm time;
     timeRead(&time);
 
     uint8 sec = secs % 60;

@@ -15,49 +15,49 @@ typedef struct list_node_t
 {
     struct list_node_t *prev; // 下一个结点
     struct list_node_t *next; // 前一个结点
-} LIST_NODE_T;
+} list_node_t;
 
 // 链表
 typedef struct list_t
 {
-    LIST_NODE_T head; // 头结点
-    LIST_NODE_T tail; // 尾结点
-} LIST_T;
+    list_node_t head; // 头结点
+    list_node_t tail; // 尾结点
+} list_t;
 
 // 初始化链表
-void listInit(LIST_T *list);
+void listInit(list_t *list);
 
 // 在 anchor 结点前插入结点 node
-void listInsertBefore(LIST_NODE_T *anchor, LIST_NODE_T *node);
+void listInsertBefore(list_node_t *anchor, list_node_t *node);
 
 // 在 anchor 结点后插入结点 node
-void listInsertAfter(LIST_NODE_T *anchor, LIST_NODE_T *node);
+void listInsertAfter(list_node_t *anchor, list_node_t *node);
 
 // 插入到头结点后
-void listPush(LIST_T *list, LIST_NODE_T *node);
+void listPush(list_t *list, list_node_t *node);
 
 // 移除头结点后的结点
-LIST_NODE_T *listPop(LIST_T *list);
+list_node_t *listPop(list_t *list);
 
 // 插入到尾结点前
-void listPushback(LIST_T *list, LIST_NODE_T *node);
+void listPushback(list_t *list, list_node_t *node);
 
 // 移除尾结点前的结点
-LIST_NODE_T *listPopback(LIST_T *list);
+list_node_t *listPopback(list_t *list);
 
 // 查找链表中结点是否存在
-bool listSearch(LIST_T *list, LIST_NODE_T *node);
+bool listSearch(list_t *list, list_node_t *node);
 
 // 从链表中删除结点
-void listRemove(LIST_NODE_T *node);
+void listRemove(list_node_t *node);
 
 // 判断链表是否为空
-bool listEmpty(LIST_T *list);
+bool listEmpty(list_t *list);
 
 // 获得链表长度
-uint32 listSize(LIST_T *list);
+uint32 listSize(list_t *list);
 
 // 链表插入排序
-void listInsertSort(LIST_T *list, LIST_NODE_T *node, int offset);
+void listInsertSort(list_t *list, list_node_t *node, int offset);
 
 #endif

@@ -28,15 +28,14 @@ data_selector equ (2 << 3)
 section .text
 global _start
 _start:
-    mov esp, 0xAFFFFF
+    mov esp, 0x10000
     push ebx; 内存检测结果的结构数量指针
     push eax; magic
     ; 内存检测的初始化函数
     call consoleInit
-    ; xchg bx, bx
     call gdtInit
-    ; xchg bx, bx
     lgdt [m_gdtPtr]
+    mov eax, _next
     jmp dword code_selector:_next
 
 _next:
@@ -51,7 +50,6 @@ _next:
     call memoryInit
     add esp, 0x08
     call kernelInit
-    ; xchg bx, bx
     ; mov eax, 0 ; 0 号系统调用
     ; int 0x80
     jmp $

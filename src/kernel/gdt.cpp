@@ -4,13 +4,13 @@
 #include <kernel/assert.h>
 
 
-GDT_DESCRIPTOR m_gdt[GDT_SIZE];
+descriptor_t m_gdt[GDT_SIZE];
 GDT_POINTER m_gdtPtr;
 TSS_T m_tss;
 
 // Gdt::~Gdt(){};
 
-void setMemory(GDT_DESCRIPTOR *desc, uint32 base, uint32 limit)
+void setMemory(descriptor_t *desc, uint32 base, uint32 limit)
 {
     desc->baseLow = base & 0xffffff;
     desc->baseHigh = (base >> 24) & 0xff;
@@ -25,14 +25,13 @@ void setMemory(GDT_DESCRIPTOR *desc, uint32 base, uint32 limit)
 // index 5  用户数据段
 extern "C" void gdtInit()
 {
-    memset(&m_gdt[0], 0, sizeof(GDT_DESCRIPTOR));
-    memset(&m_tss, 0, sizeof(TSS_T));
-    DEBUGK("init gdt!!!\n");
-    DEBUGK("gdt address: %p", &m_gdt[0]);
-    DEBUGK("gdt_pointer address: %p", &m_gdtPtr);
-    DEBUGK("tss address: %p", &m_tss);
-    memset(m_gdt, 0, sizeof(m_gdt));
-    GDT_DESCRIPTOR *gdtDesPtr = nullptr;
+    memset(&m_gdt[0], 0, sizeof(descriptor_t));
+    // DEBUGK("init gdt!!!\n");
+    // DEBUGK("gdt address: %p", &m_gdt[0]);
+    // DEBUGK("gdt_pointer address: %p", &m_gdtPtr);
+    // DEBUGK("tss address: %p", &m_tss);
+    // memset(m_gdt, 0, sizeof(m_gdt));
+    descriptor_t *gdtDesPtr = nullptr;
     gdtDesPtr = &m_gdt[KERNEL_CODE_INDEX];
     setMemory(gdtDesPtr, 0, 0xFFFFF);
     gdtDesPtr->segment = 1;     // 代码段
@@ -54,17 +53,18 @@ extern "C" void gdtInit()
     gdtDesPtr->type = 0b0010;   // 数据 / 向上增长 / 可写 / 没有被访问过
 
     // tss
-    m_tss.ss0 = KERNEL_DATA_SELECTOR;
-    m_tss.iobase = sizeof(m_tss);
-    gdtDesPtr = &m_gdt[KERNEL_TSS_INDEX];
-    setMemory(gdtDesPtr, (uint32)&m_tss, sizeof(m_tss) - 1);
-    gdtDesPtr->segment = 0;     // 系统段
-    gdtDesPtr->granularity = 0; // 字节
-    gdtDesPtr->big = 0;         // 固定为 0
-    gdtDesPtr->longMode = 0;   // 固定为 0
-    gdtDesPtr->present = 1;     // 在内存中
-    gdtDesPtr->DPL = 0;         // 用于任务门或调用门
-    gdtDesPtr->type = 0b1001;   // 32 位可用 tss
+    // memset(&m_tss, 0, sizeof(TSS_T));
+    // m_tss.ss0 = KERNEL_DATA_SELECTOR;
+    // m_tss.iobase = sizeof(m_tss);
+    // gdtDesPtr = &m_gdt[KERNEL_TSS_INDEX];
+    // setMemory(gdtDesPtr, (uint32)&m_tss, sizeof(m_tss) - 1);
+    // gdtDesPtr->segment = 0;     // 系统段
+    // gdtDesPtr->granularity = 0; // 字节
+    // gdtDesPtr->big = 0;         // 固定为 0
+    // gdtDesPtr->longMode = 0;   // 固定为 0
+    // gdtDesPtr->present = 1;     // 在内存中
+    // gdtDesPtr->DPL = 0;         // 用于任务门或调用门
+    // gdtDesPtr->type = 0b1001;   // 32 位可用 tss
 
 
     gdtDesPtr = &m_gdt[USER_CODE_INDEX];
@@ -98,7 +98,7 @@ void tssInit()
     memset(&m_tss, 0, sizeof(m_tss));
     m_tss.ss0 = KERNEL_DATA_SELECTOR;
     m_tss.iobase = sizeof(m_tss);
-    GDT_DESCRIPTOR *desc = m_gdt + KERNEL_TSS_INDEX;
+    descriptor_t *desc = m_gdt + KERNEL_TSS_INDEX;
     setMemory(desc, (uint32)&m_tss, sizeof(m_tss) - 1);
     desc->segment = 0;     // 系统段
     desc->granularity = 0; // 字节

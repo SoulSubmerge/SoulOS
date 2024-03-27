@@ -15,7 +15,7 @@ void mutexLock(mutex_t *mutex)
     // 关闭中断，保证原子操作
     bool intr = interruptDisable();
 
-    TASK_INFO *current = runningTask();
+    task_t *current = runningTask();
     while (mutex->value == true)
     {
         // 若 value 为 true，表示已经被别人持有
@@ -50,7 +50,7 @@ void mutexUnlock(mutex_t *mutex)
     // 如果等待队列不为空，则恢复执行
     if (!listEmpty(&mutex->waiters))
     {
-        TASK_INFO *task = ELEMENT_ENTRY(TASK_INFO, node, mutex->waiters.tail.prev);
+        task_t *task = ELEMENT_ENTRY(task_t, node, mutex->waiters.tail.prev);
         assert(task->magic == SOUL_MAGIC, "Task page stack overflow causes task PCB information to be damaged.");
         taskUnblock(task);
         // 保证新进程能获得互斥量，不然可能饿死
@@ -72,7 +72,7 @@ void lockInit(lock_t *lock)
 // 尝试持有锁
 void lockAcquire(lock_t *lock)
 {
-    TASK_INFO *current = runningTask();
+    task_t *current = runningTask();
     if (lock->holder != current)
     {
         mutexLock(&lock->mutex);
@@ -89,7 +89,7 @@ void lockAcquire(lock_t *lock)
 // 释放锁
 void lockRelease(lock_t *lock)
 {
-    TASK_INFO *current = runningTask();
+    task_t *current = runningTask();
     assert(lock->holder == current, "The current thread is expected to be the holder of the lock.");
     if (lock->repeat > 1)
     {

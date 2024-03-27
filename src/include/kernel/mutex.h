@@ -8,14 +8,14 @@
 typedef struct mutex_t
 {
     bool value; // 互斥信号量
-    LIST_T waiters; // 等待队列
+    list_t waiters; // 等待队列
 }mutex_t;
 
 
 
 typedef struct lock_t
 {
-    TASK_INFO *holder; // 持有者
+    task_t *holder; // 持有者
     mutex_t mutex;     // 互斥量
     uint32 repeat;     // 重入次数
 }lock_t;

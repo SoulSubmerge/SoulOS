@@ -10,7 +10,7 @@
 
 uint32 volatile jiffies = 0;
 uint32 jiffy = JIFFY;
-bool volatile beeping = false;
+uint32 volatile beeping = 0;
 
 
 void startBeep()
@@ -46,7 +46,7 @@ void clockHandler(int vector)
 
     jiffies++;
     // DEBUGK("clock jiffies %d ...\n", jiffies);
-    TASK_INFO *task = runningTask();
+    task_t *task = runningTask();
     assert(task->magic == SOUL_MAGIC, "Task page stack overflow causes task PCB information to be damaged.");
 
     task->jiffies = jiffies;
@@ -57,6 +57,13 @@ void clockHandler(int vector)
     }
 }
 
+extern uint32 startupTime;
+
+time_t sysTime()
+{
+    return startupTime + (jiffies * JIFFY) / 1000;
+}
+
 void pitInit()
 {
     // 配置计数器 0 时钟
@@ -65,9 +72,9 @@ void pitInit()
     outByte(PIT_CHAN0_REG, (CLOCK_COUNTER >> 8) & 0xff);
 
     // 配置计数器 2 蜂鸣器
-    // outByte(PIT_CTRL_REG, 0b10110110);
-    // outByte(PIT_CHAN2_REG, (uint8)BEEP_COUNTER);
-    // outByte(PIT_CHAN2_REG, (uint8)(BEEP_COUNTER >> 8));
+    outByte(PIT_CTRL_REG, 0b10110110);
+    outByte(PIT_CHAN2_REG, (uint8)BEEP_COUNTER);
+    outByte(PIT_CHAN2_REG, (uint8)(BEEP_COUNTER >> 8));
 }
 
 void clockInit()

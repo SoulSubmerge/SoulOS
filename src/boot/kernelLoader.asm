@@ -109,8 +109,8 @@ ProtectMode:
     ; call ReadDiskFn
     ; add esp, 0x0c
     push 0x05
-    push 0xB00000
-    push 0x80 ; 0x80 -> 128块 16MB(内核固定16MB,需要提示内核大小需要修改memory.h的宏KERNEL_MEMORY_SIZE); 0x190 -> 400 块 50MB(最大)
+    push 0x10000; 0xB00000
+    push 0x01 ; 0x80 -> 128块 16MB(内核固定16MB,需要提示内核大小需要修改memory.h的宏KERNEL_MEMORY_SIZE); 0x190 -> 400 块 50MB(最大)
     call ReadBlocksFn
     add esp, 0x0c
     ; pop eax
@@ -118,7 +118,7 @@ ProtectMode:
     ; pop eax
     mov eax, 0x4F5DA2 ; 内核魔术，占个位，方便后期扩展用的，占时没什么用
     mov ebx, ardsCount + 0x1000 ; 内存检测的结构数量指针
-    jmp dword CODE_SELECTOR:0xB00040
+    jmp dword CODE_SELECTOR:0x10040
 
 ; 由于端口一次性只能读取 256 个扇区，所以需要建 256 个扇区作为一个块来读
 ReadBlocksFn:

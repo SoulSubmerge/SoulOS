@@ -21,10 +21,12 @@ typedef unsigned long long size_t;
 typedef unsigned int time_t;
 typedef unsigned int idx_t;
 
+typedef int32 pid_t;
+
 #define UINT32_MAX 4294967295
 #define UINT64_MAX 18446744073709551615
 
-#define EOF -EEOF // END OF FILE
+#define EOF -1 // END OF FILE
 
 #define EOS '\0' // 字符串结尾
 

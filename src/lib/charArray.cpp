@@ -140,7 +140,7 @@ void *memcpy(void *dest, const void *src, size_t count)
     const char* tSrc = (const char*)src;
     while (count--)
     {
-        *ptr++ = *(tSrc++);
+        *ptr++ = *((char*)(tSrc++));
     }
     return dest;
 }

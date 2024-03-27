@@ -15,11 +15,11 @@ typedef struct tm
     int32 wday;  // 1 星期中的某天 [0，6] (星期天 =0)
     int32 yday;  // 1 年中的某天 [0，365]
     int32 isdst; // 夏令时标志
-}TM_INFO;
+}tm;
 
-void timeReadBcd(TM_INFO *_time);
-void timeRead(TM_INFO *_time);
-time_t mktime(TM_INFO *_time);
-void localtime(time_t _stamp, TM_INFO *_time);
+void timeReadBcd(tm *_time);
+void timeRead(tm *_time);
+time_t mktime(tm *_time);
+void localtime(time_t _stamp, tm *_time);
 
 #endif

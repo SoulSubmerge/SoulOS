@@ -12,8 +12,8 @@ SRC_IO_DIR:=$(SRC_DIR)/io
 SRC_LIB_DIR:=$(SRC_DIR)/lib
 SRC_TYPES_DIR:=$(SRC_DIR)/types
 
-MULTIBOOT2:=0xB00000
-ENTRY_POINT:=0xB00040
+MULTIBOOT2:=0x10000
+ENTRY_POINT:=0x10040
 
 CFLAGS:= -m32
 CFLAGS+= -fno-builtin			# 不需要 gcc 内置函数
@@ -87,6 +87,7 @@ $(BUILD_KERNEL_DIR)/kernel_temp.bin: $(BUILD_KERNEL_DIR)/kernel_asm.o \
 	$(BUILD_KERNEL_DIR)/mutex.o \
 	$(BUILD_KERNEL_DIR)/keyboard.o \
 	$(BUILD_KERNEL_DIR)/arena.o \
+	$(BUILD_KERNEL_DIR)/ide.o \
 	$(BUILD_IO_DIR)/io_asm.o \
 	$(BUILD_IO_DIR)/cursor.o \
 	$(BUILD_LIB_DIR)/stdlib.o \

@@ -2,7 +2,7 @@
 #include <kernel/assert.h>
 
 // 初始化链表
-void listInit(LIST_T *list)
+void listInit(list_t *list)
 {
     list->head.prev = nullptr;
     list->tail.next = nullptr;
@@ -11,7 +11,7 @@ void listInit(LIST_T *list)
 }
 
 // 在 anchor 结点前插入结点 node
-void listInsertBefore(LIST_NODE_T *anchor, LIST_NODE_T *node)
+void listInsertBefore(list_node_t *anchor, list_node_t *node)
 {
     node->prev = anchor->prev;
     node->next = anchor;
@@ -21,7 +21,7 @@ void listInsertBefore(LIST_NODE_T *anchor, LIST_NODE_T *node)
 }
 
 // 在 anchor 结点后插入结点 node
-void listInsertAfter(LIST_NODE_T *anchor, LIST_NODE_T *node)
+void listInsertAfter(list_node_t *anchor, list_node_t *node)
 {
     node->prev = anchor;
     node->next = anchor->next;
@@ -31,43 +31,43 @@ void listInsertAfter(LIST_NODE_T *anchor, LIST_NODE_T *node)
 }
 
 // 插入到头结点后
-void listPush(LIST_T *list, LIST_NODE_T *node)
+void listPush(list_t *list, list_node_t *node)
 {
     assert(!listSearch(list, node), "The inserted node exists.");
     listInsertAfter(&list->head, node);
 }
 
 // 移除头结点后的结点
-LIST_NODE_T *listPop(LIST_T *list)
+list_node_t *listPop(list_t *list)
 {
     assert(!listEmpty(list), "The removed node does not exist.");
 
-    LIST_NODE_T *node = list->head.next;
+    list_node_t *node = list->head.next;
     listRemove(node);
 
     return node;
 }
 
 // 插入到尾结点前
-void listPushback(LIST_T *list, LIST_NODE_T *node)
+void listPushback(list_t *list, list_node_t *node)
 {
     assert(!listSearch(list, node), "The inserted node exists.");
     listInsertBefore(&list->tail, node);
 }
 
 // 移除尾结点前的结点
-LIST_NODE_T *listPopback(LIST_T *list)
+list_node_t *listPopback(list_t *list)
 {
     assert(!listEmpty(list), "The removed node does not exist.");
 
-    LIST_NODE_T *node = list->tail.prev;
+    list_node_t *node = list->tail.prev;
     listRemove(node);
 
     return node;
 }
 
 // 查找链表中结点是否存在
-bool listSearch(LIST_T *list, LIST_NODE_T *node)
+bool listSearch(list_t *list, list_node_t *node)
 {
     list_node_t *next = list->head.next;
     while (next != &list->tail)
@@ -80,7 +80,7 @@ bool listSearch(LIST_T *list, LIST_NODE_T *node)
 }
 
 // 从链表中删除结点
-void listRemove(LIST_NODE_T *node)
+void listRemove(list_node_t *node)
 {
     assert(node->prev != nullptr, "The precursor of the deleted node is null.");
     assert(node->next != nullptr, "The rear drive of the deleted node is empty.");
@@ -92,15 +92,15 @@ void listRemove(LIST_NODE_T *node)
 }
 
 // 判断链表是否为空
-bool listEmpty(LIST_T *list)
+bool listEmpty(list_t *list)
 {
     return (list->head.next == &list->tail);
 }
 
 // 获得链表长度
-uint32 listSize(LIST_T *list)
+uint32 listSize(list_t *list)
 {
-    LIST_NODE_T *next = list->head.next;
+    list_node_t *next = list->head.next;
     uint32 size = 0;
     while (next != &list->tail)
     {
@@ -111,7 +111,7 @@ uint32 listSize(LIST_T *list)
 }
 
 // 链表插入排序
-void listInsertSort(list_t *list, LIST_NODE_T *node, int offset)
+void listInsertSort(list_t *list, list_node_t *node, int offset)
 {
     // 从链表找到第一个比当前节点 key 点更大的节点，进行插入到前面
     list_node_t *anchor = &list->tail;

@@ -59,9 +59,8 @@ enum state
     STATE_CSI,
 };
 
-class ConsoleData
+typedef struct ConsoleData
 {
-public:
     uint32 mem_base; // 内存基地址
     uint32 mem_size; // 内存大小
     uint32 mem_end;  // 内存结束位置
@@ -89,7 +88,7 @@ public:
 
     uint16 erase; // 清屏字符
     uint8 style;  // 当前样式
-};
+}ConsoleData;
 
 int consoleWrite(char *buf, uint32 count); // 占时用于调用显卡写入字符的
 // void consoleClear();

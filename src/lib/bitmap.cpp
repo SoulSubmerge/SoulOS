@@ -3,14 +3,14 @@
 #include <kernel/assert.h>
 
 // 初始化位图
-void bitmapInit(BITMAP_T *map, char *bits, uint32 length, uint32 offset)
+void bitmapInit(bitmap_t *map, char *bits, uint32 length, uint32 offset)
 {
     memset(bits, 0, length);
     bitmapMake(map, bits, length, offset);
 }
 
 // 构造位图
-void bitmapMake(BITMAP_T *map, char *bits, uint32 length, uint32 offset)
+void bitmapMake(bitmap_t *map, char *bits, uint32 length, uint32 offset)
 {
     map->bits = (uint8*)bits;
     map->length = length;
@@ -18,7 +18,7 @@ void bitmapMake(BITMAP_T *map, char *bits, uint32 length, uint32 offset)
 }
 
 // 测试位图的某一位是否为 1
-bool bitmapTest(BITMAP_T *map, uint32 index)
+bool bitmapTest(bitmap_t *map, uint32 index)
 {
     assert(index >= map->offset, "Index overreach error.");
 
@@ -38,7 +38,7 @@ bool bitmapTest(BITMAP_T *map, uint32 index)
 }
 
 // 设置位图某位的值
-void bitmapSet(BITMAP_T *map, uint32 index, bool value)
+void bitmapSet(bitmap_t *map, uint32 index, bool value)
 {
     // value 必须是二值的
     assert(value == 0 || value == 1, "The value of the bitmap is incorrect.");
@@ -66,7 +66,7 @@ void bitmapSet(BITMAP_T *map, uint32 index, bool value)
 }
 
 // 从位图中得到连续的 count 位
-int bitmapScan(BITMAP_T *map, uint32 count)
+int bitmapScan(bitmap_t *map, uint32 count)
 {
     int start = EOF;                 // 标记目标开始的位置
     uint32 bits_left = map->length * 8; // 剩余的位数

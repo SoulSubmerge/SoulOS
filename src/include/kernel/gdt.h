@@ -21,7 +21,7 @@
 
 #pragma pack(1)
 // 全局描述符表
-typedef struct gdt_descriptor
+typedef struct descriptor_t
 {
     uint16 limitLow;      // 段界限 0 ~ 15 位
     uint32 baseLow : 24;    // 基地址 0 ~ 23 位 16M
@@ -35,7 +35,7 @@ typedef struct gdt_descriptor
     uint8 big : 1;         // 32 位 还是 16 位;
     uint8 granularity : 1; // 粒度 4KB 或 1B
     uint8 baseHigh;       // 基地址 24 ~ 31 位
-}GDT_DESCRIPTOR;
+}descriptor_t;
 #pragma pack()
 
 #pragma pack(1)

@@ -23,6 +23,7 @@ extern void timeInit(); // 初始化系统时间
 extern void rtcInit(); // 时钟中断初始化函数
 extern void memoryMapInit(); // 内存页初始化函数
 extern void mappingInit(); // 内存映射初始化函数
+extern void ideInit(); // 磁盘控制器初始化函数
 extern void syscallInit(); // 系统调用初始化函数
 extern void keyboardInit(); // 键盘中断初始化函数
 extern void tssInit();
@@ -47,13 +48,14 @@ extern "C" void kernelInit()
     mappingInit();
     arenaInit();
     interruptInit();
-    taskInit();
     clockInit();
     keyboardInit();
-    // timeInit();
+    timeInit();
     // rtcInit();
+    ideInit();
+    taskInit();
     syscallInit();
-    // listTest();
+
     setInterruptStateTrue();
     LOGK("\n - - - Kernel initialization is complete. - - - \n");
     return;

@@ -10,10 +10,6 @@
 
 #define TASK_NAME_LEN 16
 
-
-// 一个任务的栈页大小 4k
-#define STACK_FRAME_SIZE 0x1000
-
 typedef void (*target_t)(void);
 typedef void (*eipPtr)(void);
 typedef enum task_state_t
@@ -25,31 +21,36 @@ typedef enum task_state_t
     TASK_SLEEPING, // 睡眠
     TASK_WAITING,  // 等待
     TASK_DIED,     // 死亡
-}TASK_STATE_ENUM;
+}task_state_t;
 
-typedef struct task_info
+typedef struct task_t
 {
     uint32 *stack;              // 内核栈
-    LIST_NODE_T node;           // 任务阻塞节点
-    TASK_STATE_ENUM state;      // 任务状态
+    list_node_t node;           // 任务阻塞节点
+    task_state_t state;      // 任务状态
     uint32 priority;            // 任务优先级
     uint32 ticks;               // 剩余时间片
     uint32 jiffies;             // 上次执行时全局时间片
-    int8 name[TASK_NAME_LEN];   // 任务名
+    char name[TASK_NAME_LEN];   // 任务名
     uint32 uid;                 // 用户 id
+    pid_t pid;                  // 任务ID
+    pid_t ppid;                 // 父任务ID
     uint32 pde;                 // 页目录物理地址
-    BITMAP_T *vmap;             // 进程虚拟内存位图
+    bitmap_t *vmap;             // 进程虚拟内存位图
+    uint32 brk;
+    int32 status;               // 进程特殊状态
+    pid_t waitpid;            // 进程等待的 pid
     uint32 magic;               // 内核魔数，用于检测栈溢出
-}TASK_INFO;
+}task_t;
 
-typedef struct task_register_info
+typedef struct task_frame_t
 {
     uint32 edi;
     uint32 esi;
     uint32 ebx;
     uint32 ebp;
     eipPtr eip;
-}TASK_REGISTER_INFO;
+}task_frame_t;
 
 
 typedef struct intr_frame_t
@@ -85,15 +86,22 @@ typedef struct intr_frame_t
 
 
 void taskInit();
-TASK_INFO* runningTask();
-void schedule();
 
+
+task_t* runningTask();
+void schedule();
+void taskExit(int32 status);
+pid_t taskFork();
+pid_t taskWaitpid(pid_t pid, int32 *status);
 void taskYield();
-void taskBlock(TASK_INFO *task, LIST_T *blist, TASK_STATE_ENUM state); // 任务阻塞
-void taskUnblock(TASK_INFO *task); // 解除阻塞，就绪
+void taskBlock(task_t *task, list_t *blist, task_state_t state); // 任务阻塞
+void taskUnblock(task_t *task); // 解除阻塞，就绪
 void taskSleep(uint32 ms); // 睡眠
 void taskWakeup(); // 苏醒
 
 void taskToUserMode(target_t target);
+
+pid_t sysGetpid();
+pid_t sysGetppid();
 
 #endif

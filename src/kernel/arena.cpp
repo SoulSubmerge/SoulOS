@@ -92,7 +92,7 @@ void *kmalloc(size_t size)
 
     arena = getBlockArena(block);
     assert(arena->magic == SOUL_MAGIC && !arena->large, "Memory error occurred.");
-    memset(block, 0, desc->blockSize);
+    // memset(block, 0, desc->blockSize);
     arena->count--;
     return block;
 }

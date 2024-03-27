@@ -5,10 +5,10 @@
 #include <kernel/printk.h>
 #include <kernel/task.h>
 
-IDT_DESCRIPTOR globalIdt[IDT_SIZE];
-IDT_POINTER globalIdtPtr;
+gate_t globalIdt[IDT_SIZE];
+idt_pointer globalIdtPtr;
 
-extern "C" void interruptHandler();
+// extern "C" void interruptHandler();
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 // #define LOGK(fmt, args...)
@@ -170,7 +170,7 @@ void idtInit()
 {
     for (uint32 i = 0; i < ENTRY_SIZE; i++)
     {
-        IDT_DESCRIPTOR *tempIdtPtr = &globalIdt[i];
+        gate_t *tempIdtPtr = &globalIdt[i];
         handleFunc tempHandler = handlerEntryTable[i];
 
         tempIdtPtr->offsetLow = (uint32)tempHandler & 0xffff;
@@ -188,7 +188,7 @@ void idtInit()
         handlerTable[i] = (handleFunc)exceptionHandler;
     }
 
-    // handlerTable[0xe] = (void*)pageFault;
+    handlerTable[0xe] = (handleFunc)pageFault;
 
     for (uint32 i = 0x20; i < ENTRY_SIZE; i++)
     {
@@ -196,7 +196,7 @@ void idtInit()
     }
 
     // // 初始化系统调用
-    IDT_DESCRIPTOR *tempIdtPtr = &globalIdt[0x80];
+    gate_t *tempIdtPtr = &globalIdt[0x80];
     tempIdtPtr->offsetLow = (uint32)syscallHandler & 0xffff;
     tempIdtPtr->offsetHigh = ((uint32)syscallHandler >> 16) & 0xffff;
     tempIdtPtr->codeSelector = 1 << 3; // 代码段

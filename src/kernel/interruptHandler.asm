@@ -2,13 +2,12 @@
 ; 中断处理函数入口 
 
 extern handlerTable
-extern taskSignal
+; extern taskSignal
 
 section .text
 
 %macro INTERRUPT_HANDLER 2
 INTERRUPT_HANDLER_FN_%1:
-    ; xchg bx, bx
 %ifn %2
     push 0x4F5DA2
 %endif
@@ -169,7 +168,6 @@ extern syscallCheck
 extern syscallTable
 global syscallHandler
 syscallHandler:
-    ; xchg bx, bx
 
     ; 验证系统调用号
     push eax
@@ -199,7 +197,7 @@ syscallHandler:
 
     ; 调用系统调用处理函数，syscall_table 中存储了系统调用处理函数的指针
     call [syscallTable + eax * 4]
-    add esp, (3 * 4); 系统调用结束恢复栈
+    add esp, 12; 系统调用结束恢复栈
     ; 修改栈中 eax 寄存器，设置系统调用返回值
     mov dword [esp + 8 * 4], eax
 

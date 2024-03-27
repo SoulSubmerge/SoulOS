@@ -34,12 +34,10 @@
 #define IRQ_SERIAL_2 3   // 串口 2
 #define IRQ_SERIAL_1 4   // 串口 1
 #define IRQ_PARALLEL_2 5 // 并口 2
-#define IRQ_SB16 5       // SB16 声卡
 #define IRQ_FLOPPY 6     // 软盘控制器
 #define IRQ_PARALLEL_1 7 // 并口 1
 #define IRQ_RTC 8        // 实时时钟
 #define IRQ_REDIRECT 9   // 重定向 IRQ2
-#define IRQ_NIC 11       // 网卡
 #define IRQ_MOUSE 12     // 鼠标
 #define IRQ_MATH 13      // 协处理器 x87
 #define IRQ_HARDDISK 14  // ATA 硬盘第一通道
@@ -49,7 +47,7 @@
 #define IRQ_SLAVE_NR 0x28  // 从片起始向量号
 
 #pragma pack(1)
-typedef struct idt_descriptor
+typedef struct gate_t
 {
     uint16 offsetLow;    // 段内偏移 0 ~ 15 位
     uint16 codeSelector;   // 代码段选择子
@@ -59,7 +57,7 @@ typedef struct idt_descriptor
     uint8 DPL : 2;     // 使用 int 指令访问的最低权限
     uint8 present : 1; // 是否有效
     uint16 offsetHigh;    // 段内偏移 16 ~ 31 位
-}IDT_DESCRIPTOR;
+}gate_t;
 #pragma pack()
 
 
@@ -69,7 +67,7 @@ typedef struct idt_pointer
 {
     uint16 limit;
     uint32 basePtr;
-}IDT_POINTER;
+}idt_pointer;
 #pragma pack()
 
 // 中断处理函数
