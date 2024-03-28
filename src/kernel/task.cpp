@@ -341,7 +341,6 @@ static void taskBuildStack(task_t *task)
 
 pid_t taskFork()
 {
-    // LOGK("fork is called\n");
     task_t *task = runningTask();
 
     // 当前进程没有阻塞，且正在执行
@@ -401,7 +400,6 @@ void taskExit(int status)
             continue;
         child->ppid = task->ppid;
     }
-    LOGK("task 0x%p exit....\n", task);
 
     task_t *parent = taskTable[task->ppid];
     if (parent->state == TASK_WAITING && (parent->waitpid == -1 || parent->waitpid == task->pid))
@@ -487,6 +485,8 @@ void taskInit()
     taskSetup();
     idleTask = taskCreate((target_t)idleThread,"idle",1,KERNEL_USER);
     taskCreate((target_t)initThread, "init", 5, NORMAL_USER);
+    taskCreate((target_t)testThread, "test", 5, KERNEL_USER);
+    taskCreate((target_t)testThread, "test", 5, KERNEL_USER);
     taskCreate((target_t)testThread, "test", 5, KERNEL_USER);
 }
 

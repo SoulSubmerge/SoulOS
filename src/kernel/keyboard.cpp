@@ -6,6 +6,7 @@
 #include <lib/fifo.h>
 #include <kernel/mutex.h>
 #include <kernel/task.h>
+#include <kernel/device.h>
 
 #define KEYBOARD_DATA_PORT 0x60
 #define KEYBOARD_CTRL_PORT 0x64
@@ -278,7 +279,7 @@ void keyboardHandler(int vector)
     if (ch == INV)
         return;
 
-    // LOGK("keydown %c \n", ch);
+
     fifoPut(&keyboardFifo, ch);
     if (waiter != nullptr)
     {
@@ -287,7 +288,7 @@ void keyboardHandler(int vector)
     }
 }
 
-uint32 keyboardRead(char *buf, uint32 count)
+uint32 keyboardRead(void* dev, char *buf, uint32 count)
 {
     lockAcquire(&keyboardLock);
     int nr = 0;
@@ -316,4 +317,8 @@ void keyboardInit()
     setLeds();
     setInterruptHandler(IRQ_KEYBOARD, keyboardHandler);
     setInterruptMask(IRQ_KEYBOARD, true);
+    deviceInstall(
+        DEV_CHAR, DEV_KEYBOARD,
+        nullptr, "keyboard", 0,
+        nullptr, (void*)keyboardRead, nullptr);
 }

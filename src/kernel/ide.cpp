@@ -8,8 +8,8 @@
 #include <lib/charArray.h>
 #include <kernel/assert.h>
 #include <kernel/debug.h>
-
-#define LOGK(fmt, args...) DEBUGK(fmt, ##args)
+#include <kernel/device.h>
+#include <kernel/logk.h>
 
 // IDE 寄存器基址
 #define IDE_IOBASE_PRIMARY 0x1F0   // 主通道基地址
@@ -65,10 +65,58 @@
 #define IDE_LBA_MASTER 0b11100000 // 主盘 LBA
 #define IDE_LBA_SLAVE 0b11110000  // 从盘 LBA
 
+// 分区文件系统
+// 参考 https://www.win.tue.nl/~aeb/partitions/partition_types-1.html
+typedef enum PART_FS
+{
+    PART_FS_FAT12 = 1,    // FAT12
+    PART_FS_EXTENDED = 5, // 扩展分区
+    PART_FS_MINIX = 0x80, // minux
+    PART_FS_LINUX = 0x83, // linux
+}PART_FS;
+
+#pragma pack(1)
+typedef struct ide_params_t
+{
+    uint16 config;                 // 0 General configuration bits
+    uint16 cylinders;              // 01 cylinders
+    uint16 RESERVED;               // 02
+    uint16 heads;                  // 03 heads
+    uint16 RESERVED[5 - 3];        // 05
+    uint16 sectors;                // 06 sectors per track
+    uint16 RESERVED[9 - 6];        // 09
+    uint8 serial[20];              // 10 ~ 19 序列号
+    uint16 RESERVED[22 - 19];      // 10 ~ 22
+    uint8 firmware[8];             // 23 ~ 26 固件版本
+    uint8 model[40];               // 27 ~ 46 模型数
+    uint8 drqSectors;             // 47 扇区数量
+    uint8 RESERVED[3];             // 48
+    uint16 capabilities;           // 49 能力
+    uint16 RESERVED[59 - 49];      // 50 ~ 59
+    uint32 totalLba;              // 60 ~ 61
+    uint16 RESERVED;               // 62
+    uint16 mdmaMode;              // 63
+    uint8 RESERVED;                // 64
+    uint8 pioMode;                // 64
+    uint16 RESERVED[79 - 64];      // 65 ~ 79 参见 ATA specification
+    uint16 majorVersion;          // 80 主版本
+    uint16 minorVersion;          // 81 副版本
+    uint16 commmandSets[87 - 81]; // 82 ~ 87 支持的命令集
+    uint16 RESERVED[118 - 87];     // 88 ~ 118
+    uint16 supportSettings;       // 119
+    uint16 enableSettings;        // 120
+    uint16 RESERVED[221 - 120];    // 221
+    uint16 transportMajor;        // 222
+    uint16 transportMinor;        // 223
+    uint16 RESERVED[254 - 223];    // 254
+    uint16 integrity;              // 校验和
+}ide_params_t;
+#pragma pack()
+
 ide_ctrl_t controllers[IDE_CTRL_NR];
 
 
-void ideHandler(int32 vector)
+static void ideHandler(int32 vector)
 {
     sendEoi(vector); // 向中断控制器发送中断处理结束信号
 
@@ -90,21 +138,21 @@ static uint32 ideError(ide_ctrl_t *ctrl)
 {
     uint8 error = inByte(ctrl->iobase + IDE_ERR);
     if (error & IDE_ER_BBK)
-        LOGK("bad block\n");
+        LOGK("bad block");
     if (error & IDE_ER_UNC)
-        LOGK("uncorrectable data\n");
+        LOGK("uncorrectable data");
     if (error & IDE_ER_MC)
-        LOGK("media change\n");
+        LOGK("media change");
     if (error & IDE_ER_IDNF)
-        LOGK("id not found\n");
+        LOGK("id not found");
     if (error & IDE_ER_MCR)
-        LOGK("media change requested\n");
+        LOGK("media change requested");
     if (error & IDE_ER_ABRT)
-        LOGK("abort\n");
+        LOGK("abort");
     if (error & IDE_ER_TK0NF)
-        LOGK("track 0 not found\n");
+        LOGK("track 0 not found");
     if (error & IDE_ER_AMNF)
-        LOGK("address mark not found\n");
+        LOGK("address mark not found");
     return error;
 }
 
@@ -125,6 +173,15 @@ static uint32 ideBusyWait(ide_ctrl_t *ctrl, uint8 mask)
         if ((state & mask) == mask) // 等待的状态完成
             return 0;
     }
+}
+
+// 重置硬盘控制器
+static void ideResetController(ide_ctrl_t *ctrl)
+{
+    outByte(ctrl->iobase + IDE_CONTROL, IDE_CTRL_SRST);
+    ideBusyWait(ctrl, IDE_SR_NULL);
+    outByte(ctrl->iobase + IDE_CONTROL, ctrl->control);
+    ideBusyWait(ctrl, IDE_SR_NULL);
 }
 
 // 选择磁盘
@@ -173,9 +230,25 @@ static void idePioWriteSector(ide_disk_t *disk, uint16 *buf)
     }
 }
 
-// PIO 方式读取磁盘
-int idePioRead(ide_disk_t *disk, void *buf, uint8 count, idx_t lba)
+// 磁盘控制
+int idePioIoctl(ide_disk_t *disk, int cmd, void *args, int flags)
 {
+    switch (cmd)
+    {
+    case DEV_CMD_SECTOR_START:
+        return 0;
+    case DEV_CMD_SECTOR_COUNT:
+        return disk->totalLba;
+    default:
+        panic("device command %d can't recognize!!!", cmd);
+        return -1;
+    }
+}
+
+// PIO 方式读取磁盘
+int idePioRead(ide_disk_t *disk, void *buf, size_t _count, idx_t lba)
+{
+    uint8 count = (uint8)_count;
     assert(count > 0, "");
     assert(!getInterruptState(), ""); // 异步方式，调用该函数时不许中断
 
@@ -215,16 +288,15 @@ int idePioRead(ide_disk_t *disk, void *buf, uint8 count, idx_t lba)
 }
 
 // PIO 方式写磁盘
-int idePioWrite(ide_disk_t *disk, void *buf, uint8 count, idx_t lba)
+int idePioWrite(ide_disk_t *disk, void *buf, size_t _count, idx_t lba)
 {
+    uint8 count = (uint8)(_count);
     assert(count > 0, "");
     assert(!getInterruptState(), ""); // 异步方式，调用该函数时不许中断
 
     ide_ctrl_t *ctrl = disk->ctrl;
 
     lockAcquire(&ctrl->lock);
-
-    LOGK("write lba 0x%x\n", lba);
 
     // 选择磁盘
     ideSelectDrive(disk);
@@ -250,7 +322,6 @@ int idePioWrite(ide_disk_t *disk, void *buf, uint8 count, idx_t lba)
             ctrl->waiter = task;
             taskBlock(task, nullptr, TASK_BLOCKED);
         }
-
         ideBusyWait(ctrl, IDE_SR_NULL);
     }
 
@@ -258,14 +329,153 @@ int idePioWrite(ide_disk_t *disk, void *buf, uint8 count, idx_t lba)
     return 0;
 }
 
+// 分区控制
+int idePioPartIoctl(ide_part_t *part, int cmd, void *args, int flags)
+{
+    switch (cmd)
+    {
+    case DEV_CMD_SECTOR_START:
+        return part->start;
+    case DEV_CMD_SECTOR_COUNT:
+        return part->count;
+    default:
+        panic("device command %d can't recognize!!!", cmd);
+        return -1;
+    }
+}
+
+// 读分区
+int idePioPartRead(ide_part_t *part, void *buf, size_t count, idx_t lba)
+{
+    return idePioRead(part->disk, buf, count, part->start + (idx_t)lba);
+}
+
+// 写分区
+int idePioPartWrite(ide_part_t *part, void *buf, size_t count, idx_t lba)
+{
+    return idePioWrite(part->disk, buf, count, part->start + (idx_t)lba);
+}
+
+
+static void ideSwapPairs(char *buf, uint32 len)
+{
+    for (size_t i = 0; i < len; i += 2)
+    {
+        char ch = buf[i];
+        buf[i] = buf[i + 1];
+        buf[i + 1] = ch;
+    }
+    buf[len - 1] = '\0';
+}
+
+static uint32 ideIdentify(ide_disk_t *disk, uint16 *buf)
+{
+    LOGK("identifing disk %s...", disk->name);
+    lockAcquire(&disk->ctrl->lock);
+    ideSelectDrive(disk);
+
+    // ide_select_sector(disk, 0, 0);
+
+    outByte(disk->ctrl->iobase + IDE_COMMAND, IDE_CMD_IDENTIFY);
+
+    ideBusyWait(disk->ctrl, IDE_SR_NULL);
+
+    ide_params_t *params = (ide_params_t *)buf;
+
+    idePioReadSector(disk, buf);
+
+    LOGK("disk %s total lba %d", disk->name, params->totalLba);
+
+    uint32 ret = EOF;
+    if (params->totalLba == 0)
+    {
+        lockRelease(&disk->ctrl->lock);
+        return ret;
+    }
+
+    ideSwapPairs((char*)params->serial, sizeof(params->serial));
+    LOGK("disk %s serial number %s", disk->name, params->serial);
+
+    ideSwapPairs((char*)params->firmware, sizeof(params->firmware));
+    LOGK("disk %s firmware version %s", disk->name, params->firmware);
+
+    ideSwapPairs((char*)params->model, sizeof(params->model));
+    LOGK("disk %s model number %s", disk->name, params->model);
+
+    disk->totalLba = params->totalLba;
+    disk->cylinders = params->cylinders;
+    disk->heads = params->heads;
+    disk->sectors = params->sectors;
+    ret = 0;
+
+    lockRelease(&disk->ctrl->lock);
+    return ret;
+}
+
+static void idePartInit(ide_disk_t *disk, uint16 *buf)
+{
+    // 磁盘不可用
+    if (!disk->totalLba)
+        return;
+
+    // 读取主引导扇区
+    idePioRead(disk, buf, 1, 0);
+
+    // 初始化主引导扇区
+    boot_sector_t *boot = (boot_sector_t *)buf;
+
+    for (size_t i = 0; i < IDE_PART_NR; i++)
+    {
+        part_entry_t *entry = &boot->entry[i];
+        ide_part_t *part = &disk->parts[i];
+        if (!entry->count)
+            continue;
+
+        sprintf(part->name, "%s%d", disk->name, i + 1);
+
+        LOGK("part %s ", part->name);
+        LOGK("    bootable %d", entry->bootable);
+        LOGK("    start %d", entry->start);
+        LOGK("    count %d", entry->count);
+        LOGK("    system 0x%x", entry->system);
+
+        part->disk = disk;
+        part->count = entry->count;
+        part->system = entry->system;
+        part->start = entry->start;
+
+        if (entry->system == PART_FS_EXTENDED)
+        {
+            LOGK("Unsupported extended partition!!!\n");
+
+            boot_sector_t *eboot = (boot_sector_t *)(buf + SECTOR_SIZE);
+            idePioRead(disk, (void *)eboot, 1, entry->start);
+
+            for (size_t j = 0; j < IDE_PART_NR; j++)
+            {
+                part_entry_t *eentry = &eboot->entry[j];
+                if (!eentry->count)
+                    continue;
+                LOGK("part %d extend %d", i, j);
+                LOGK("    bootable %d", eentry->bootable);
+                LOGK("    start %d", eentry->start);
+                LOGK("    count %d", eentry->count);
+                LOGK("    system 0x%x", eentry->system);
+            }
+        }
+    }
+}
+
 static void ideCtrlInit()
 {
+    uint16 *buf = (uint16 *)allocKpage(1);
     for (size_t cidx = 0; cidx < IDE_CTRL_NR; cidx++)
     {
         ide_ctrl_t *ctrl = &controllers[cidx];
         sprintf(ctrl->name, "ide%u", cidx);
         lockInit(&ctrl->lock);
         ctrl->active = nullptr;
+        ctrl->waiter = nullptr;
 
         if (cidx) // 从通道
         {
@@ -275,6 +485,8 @@ static void ideCtrlInit()
         {
             ctrl->iobase = IDE_IOBASE_PRIMARY;
         }
+
+        ctrl->control = inByte(ctrl->iobase + IDE_CONTROL);
 
         for (size_t didx = 0; didx < IDE_DISK_NR; didx++)
         {
@@ -291,15 +503,44 @@ static void ideCtrlInit()
                 disk->master = true;
                 disk->selector = IDE_LBA_MASTER;
             }
+            ideIdentify(disk, buf);
+            idePartInit(disk, buf);
+        }
+    }
+    freeKpage((uint32)buf, 1);
+}
+
+static void ideInstall()
+{
+    for (size_t cidx = 0; cidx < IDE_CTRL_NR; cidx++)
+    {
+        ide_ctrl_t *ctrl = &controllers[cidx];
+        for (size_t didx = 0; didx < IDE_DISK_NR; didx++)
+        {
+            ide_disk_t *disk = &ctrl->disks[didx];
+            if (!disk->totalLba)
+                continue;
+            dev_t dev = deviceInstall(
+                DEV_BLOCK, DEV_IDE_DISK, disk, disk->name, 0,
+                (void*)idePioIoctl, (void*)idePioRead, (void*)idePioWrite);
+            for (size_t i = 0; i < IDE_PART_NR; i++)
+            {
+                ide_part_t *part = &disk->parts[i];
+                if (!part->count)
+                    continue;
+                deviceInstall(
+                    DEV_BLOCK, DEV_IDE_PART, part, part->name, dev,
+                    (void*)idePioPartIoctl, (void*)idePioPartRead, (void*)idePioPartWrite);
+            }
         }
     }
 }
 
 void ideInit()
 {
-    LOGK("ide init...\n");
+    LOGK("ide init...");
     ideCtrlInit();
-
+    ideInstall(); // 安装设备
     // 注册硬盘中断，并打开屏蔽字
     setInterruptHandler(IRQ_HARDDISK, ideHandler);
     setInterruptHandler(IRQ_HARDDISK2, ideHandler);

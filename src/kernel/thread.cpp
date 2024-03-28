@@ -13,7 +13,6 @@ void idleThread()
     uint32 counter = 0;
     while(true)
     {
-        // LOGK("idle task.... %d\n", counter++);
         asm volatile(
             "sti\n" // 开中断
             "hlt\n" // 关闭 CPU，进入暂停状态，等待外中断的到来
@@ -60,8 +59,6 @@ void initThread()
 {
 
     char temp[100]; // 为栈顶有足够的空间
-    setInterruptStateTrue();
-    test();
     taskToUserMode((target_t)userInitThread);
 }
 
@@ -69,9 +66,10 @@ void testThread()
 {
     setInterruptStateTrue();
     uint32 counter = 0;
-
+    test();
+    LOGK("test finished of task %d", getpid());
     while (true)
     {
-        sleep(8000);
+        sleep(10);
     }
 }

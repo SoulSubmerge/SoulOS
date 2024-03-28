@@ -22,6 +22,7 @@ typedef unsigned int time_t;
 typedef unsigned int idx_t;
 
 typedef int32 pid_t;
+typedef int32 dev_t;
 
 #define UINT32_MAX 4294967295
 #define UINT64_MAX 18446744073709551615
@@ -29,6 +30,10 @@ typedef int32 pid_t;
 #define EOF -1 // END OF FILE
 
 #define EOS '\0' // 字符串结尾
+
+#define CONCAT(x, y) x##y
+#define RESERVED_TOKEN(x, y) CONCAT(x, y)
+#define RESERVED RESERVED_TOKEN(reserved, __LINE__)
 
 typedef int32 fd_t;
 typedef enum std_fd_t

@@ -55,13 +55,11 @@ extern "C"  void memoryInit(uint32 magic, uint32 addr)
     // 如果是 onix loader 进入的内核
     if (magic == SOUL_MAGIC)
     {
-        // LOGK("Log address struct...%p\n", addr);
         count = *(uint32*)addr;
         ards_t *addrPtr = (ards_t *)(addr + 4);
         for (uint32 i = 0; i < count; i++, addrPtr++)
         {
-            LOGK("Memory base 0x%p - 0x%p size 0x%p type %d\n",
-                 (uint32)addrPtr->base, (uint32)addrPtr->base + (uint32)addrPtr->size - 1, (uint32)addrPtr->size, (uint32)addrPtr->type);
+            LOGK("Memory base 0x%p - 0x%p size 0x%p type %d\n",(uint32)addrPtr->base, (uint32)addrPtr->base + (uint32)addrPtr->size - 1, (uint32)addrPtr->size, (uint32)addrPtr->type);
             if (addrPtr->type == ZONE_VALID && addrPtr->size > memorySize)
             {
                 memoryBase = (uint32)addrPtr->base;
@@ -74,7 +72,6 @@ extern "C"  void memoryInit(uint32 magic, uint32 addr)
         uint32 size = *(unsigned int *)addr;
         multi_tag_t *tag = (multi_tag_t *)(addr + 8);
 
-        LOGK("Announced mbi size 0x%x\n", size);
         while (tag->type != MULTIBOOT_TAG_TYPE_END)
         {
             if (tag->type == MULTIBOOT_TAG_TYPE_MMAP)
@@ -103,9 +100,9 @@ extern "C"  void memoryInit(uint32 magic, uint32 addr)
         panic("Memory init magic unknown 0x%p\n", magic);
     }
 
-    LOGK("ARDS count %d\n", count);
-    LOGK("Memory base 0x%p\n", (uint32)memoryBase);
-    LOGK("Memory size 0x%p\n", (uint32)memorySize);
+    LOGK("ARDS count %d", count);
+    LOGK("Memory base 0x%p", (uint32)memoryBase);
+    LOGK("Memory size 0x%p", (uint32)memorySize);
 
     assert(memoryBase == MEMORY_BASE, "The memory start position is incorrect."); // 内存开始的位置为 1M
     assert((memorySize & 0xfff) == 0, "Memory page alignment error."); // 要求按页对齐
@@ -113,8 +110,8 @@ extern "C"  void memoryInit(uint32 magic, uint32 addr)
     totalPages = IDX(memorySize) + IDX(MEMORY_BASE);
     freePages = IDX(memorySize);
 
-    LOGK("Total pages %d\n", totalPages);
-    LOGK("Free pages %d\n", freePages);
+    LOGK("Total pages %d", totalPages);
+    LOGK("Free pages %d", freePages);
 
     if (memorySize < KERNEL_MEMORY_SIZE)
     {
@@ -134,7 +131,7 @@ void memoryMapInit()
 
     // 计算物理内存数组占用的页数
     memoryMapPages = divRoundUp(totalPages, PAGE_SIZE);
-    LOGK("Memory map page count %d\n", memoryMapPages);
+    LOGK("Memory map page count %d", memoryMapPages);
 
     freePages -= memoryMapPages;
 
@@ -148,7 +145,7 @@ void memoryMapInit()
         memoryMap[i] = 1;
     }
 
-    LOGK("Total pages %d free pages %d\n", totalPages, freePages);
+    LOGK("Total pages %d free pages %d", totalPages, freePages);
 
     // 初始化内核虚拟内存位图，需要 8 位对齐
     uint32 length = (IDX(KERNEL_RAMDISK_MEM) - IDX(MEMORY_BASE)) / 8;
@@ -170,7 +167,6 @@ static uint32 getPage()
             freePages--;
             assert(freePages >= 0, "No memory pages are available.");
             uint32 page = PAGE(i);
-            LOGK("GET page 0x%p\n", page);
             return page;
         }
     }
@@ -202,7 +198,6 @@ static void putPage(uint32 addr)
     }
 
     assert(freePages > 0 && freePages < totalPages, "Memory page error");
-    LOGK("PUT page 0x%p\n", addr);
 }
 
 extern "C" void _setCr3(uint32 pde); // 代码汇编实现了
@@ -241,7 +236,7 @@ void mappingInit()
         page_entry_t *dentry = &pde[didx];
         entryInit(dentry, IDX((uint32)pte));
         dentry->user = USER_MEMORY; // 只能被内核访问
-        // LOGK("PET Address: %p didx: %d\n", dentry, didx);
+
         for (idx_t tidx = 0; tidx < 1024; tidx++, index++)
         {
             // 第 0 页不映射，为造成空指针访问，缺页异常，便于排错
@@ -284,14 +279,11 @@ static page_entry_t *getPte(uint32 vaddr, bool create)
 
     if (!entry->present)
     {
-        LOGK("Get and create page table entry for 0x%p\n", vaddr);
         uint32 page = getPage();
         entryInit(entry, IDX(page));
         memset(table, 0, PAGE_SIZE);
     }
     return table;
-
-    // return (page_entry_t *)(PDE_MASK | (DIDX(vaddr) << 12));
 }
 
 // 从位图中扫描 count 个连续的页
@@ -306,7 +298,6 @@ static uint32 scanPage(bitmap_t *map, uint32 count)
     }
 
     uint32 addr = PAGE(index);
-    LOGK("Scan page 0x%p count %d\n", addr, count);
     return addr;
 }
 
@@ -329,7 +320,6 @@ uint32 allocKpage(uint32 count)
 {
     assert(count > 0, "The number of application pages is illegal.");
     uint32 vaddr = scanPage(&kernelMap, count);
-    LOGK("ALLOC kernel pages 0x%p count %d\n", vaddr, count);
     return vaddr;
 }
 
@@ -339,7 +329,6 @@ void freeKpage(uint32 vaddr, uint32 count)
     ASSERT_PAGE(vaddr);
     assert(count > 0, "Destroy unused pages.");
     resetPage(&kernelMap, vaddr, count);
-    LOGK("FREE  kernel pages 0x%p count %d\n", vaddr, count);
 }
 
 void memoryTest()
@@ -349,7 +338,6 @@ void memoryTest()
     for (size_t i = 0; i < count; i++)
     {
         pages[i] = allocKpage(1);
-        LOGK("0x%x\n", i);
     }
     for (size_t i = 0; i < count; i++)
     {
@@ -383,7 +371,6 @@ void linkPage(uint32 vaddr)
     entryInit(entry, IDX(paddr));
     flushTlb(vaddr);
 
-    LOGK("LINK from 0x%p to 0x%p\n", vaddr, paddr);
 }
 
 // 去掉 vaddr 对应的物理内存映射
@@ -411,7 +398,7 @@ void unlinkPage(uint32 vaddr)
 
     uint32 paddr = PAGE(entry->index);
 
-    DEBUGK("UNLINK from 0x%p to 0x%p\n", vaddr, paddr);
+    DEBUGK("UNLINK from 0x%p to 0x%p", vaddr, paddr);
     putPage(paddr);
     flushTlb(vaddr);
 }
@@ -437,7 +424,6 @@ page_entry_t *copyPde()
     page_entry_t *pde = (page_entry_t *)allocKpage(1); // todo free
 
     memcpy(pde, (void *)task->pde, PAGE_SIZE);
-    LOGK("pde-pde 0: %p %p\n", task->pde, pde);
     // 将最后一个页表指向页目录自己，方便修改
     page_entry_t *entry = &pde[1023];
     entryInit(entry, IDX(pde));
@@ -470,7 +456,7 @@ page_entry_t *copyPde()
         dentry->index = IDX(paddr);
     }
     setCr3(task->pde);
-    LOGK("pde-pde: %p %p\n", task->pde, pde);
+
     return pde;
 }
 
@@ -510,12 +496,10 @@ void freePde()
 
     // 释放页目录
     freeKpage(task->pde, 1);
-    LOGK("free pages %d\n", freePages);
 }
 
 int32 sysBrk(void *addr)
 {
-    LOGK("task brk 0x%p\n", addr);
     uint32 brk = (uint32)addr;
     ASSERT_PAGE(brk);
 
@@ -552,7 +536,6 @@ extern "C" void pageFault(
 {
     assert(vector == 0xe, "The interrupt vector number is incorrect.");
     uint32 vaddr = getCr2();
-    LOGK("fault address 0x%p\n", vaddr);
 
     page_error_code_t *code = (page_error_code_t *)&error;
     task_t *task = runningTask();
@@ -571,7 +554,6 @@ extern "C" void pageFault(
         if (memoryMap[entry->index] == 1)
         {
             entry->write = true;
-            LOGK("WRITE page for 0x%p\n", vaddr);
         }
         else
         {
@@ -580,7 +562,6 @@ extern "C" void pageFault(
             memoryMap[entry->index]--;
             entryInit(entry, IDX(paddr));
             flushTlb(vaddr);
-            LOGK("COPY page for 0x%p\n", vaddr);
         }
         return;
     }

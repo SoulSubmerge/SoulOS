@@ -28,7 +28,7 @@ CFLAGS:=$(strip ${CFLAGS})
 DEBUG:= -g
 INCLUDE:= -I$(SRC_DIR)/include
 
-all: $(BUILD_DIR)/SoulOS.img vmdk $(BUILD_DIR)/kernel.iso
+all: $(BUILD_DIR)/SoulOS.img $(BUILD_DIR)/slave.img vmdk $(BUILD_DIR)/kernel.iso
 
 $(BUILD_BOOT_DIR)/%_asm.bin: $(SRC_BOOT_DIR)/%.asm
 	$(shell mkdir -p $(dir $@))
@@ -88,6 +88,7 @@ $(BUILD_KERNEL_DIR)/kernel_temp.bin: $(BUILD_KERNEL_DIR)/kernel_asm.o \
 	$(BUILD_KERNEL_DIR)/keyboard.o \
 	$(BUILD_KERNEL_DIR)/arena.o \
 	$(BUILD_KERNEL_DIR)/ide.o \
+	$(BUILD_KERNEL_DIR)/device.o \
 	$(BUILD_IO_DIR)/io_asm.o \
 	$(BUILD_IO_DIR)/cursor.o \
 	$(BUILD_LIB_DIR)/stdlib.o \
@@ -114,11 +115,14 @@ $(BUILD_DIR)/SoulOS.img: $(BUILD_BOOT_DIR)/boot_asm.bin \
 	$(BUILD_BOOT_DIR)/kernelLoader_asm.bin \
 	$(BUILD_KERNEL_DIR)/kernel.bin \
 	$(BUILD_KERNEL_DIR)/kernel_temp.bin \
-	$(BUILD_KERNEL_DIR)/kernel.map
+	$(BUILD_KERNEL_DIR)/kernel.map \
+	$(SRC_DIR)/utils/master.sfdisk
 	yes | ./debug-tools/bochs-2.7/bin/bximage -q -hd=100 -func=create -sectsize=512 -imgmode=flat $@
 	dd if=$(BUILD_BOOT_DIR)/boot_asm.bin of=$@ bs=512 count=1 conv=notrunc
 	dd if=$(BUILD_BOOT_DIR)/kernelLoader_asm.bin of=$@ bs=512 count=4 seek=1 conv=notrunc
 	dd if=$(BUILD_KERNEL_DIR)/kernel.bin of=$@ bs=512 count=102400 seek=5 conv=notrunc
+# 磁盘分区
+	sfdisk $@ < $(SRC_DIR)/utils/master.sfdisk
 
 $(BUILD_DIR)/kernel.iso : $(BUILD_KERNEL_DIR)/kernel_temp.bin $(SRC_DIR)/utils/grub.cfg
 # 检测内核文件是否合法
@@ -132,6 +136,11 @@ $(BUILD_DIR)/kernel.iso : $(BUILD_KERNEL_DIR)/kernel_temp.bin $(SRC_DIR)/utils/g
 # 生成 iso 文件
 	grub-mkrescue -o $@ $(BUILD_DIR)/iso
 
+$(BUILD_DIR)/slave.img:
+# 创建一个 32M 的硬盘镜像
+	yes | ./debug-tools/bochs-2.7/bin/bximage -q -hd=32 -func=create -sectsize=512 -imgmode=flat $@
+
+IMAGES:= $(BUILD_DIR)/SoulOS.img $(BUILD_DIR)/slave.img
 
 .PHONY: bochs
 bochs:
@@ -141,6 +150,20 @@ bochs:
 bochsb:
 	./debug-tools/bochs-2.7/bin/bochs -f ./bochsrc.grub -q
 
+
+QEMU:= qemu-system-i386 # 虚拟机
+QEMU+= -m 1024M # 内存
+QEMU+= -audiodev pa,id=hda # 音频设备
+QEMU+= -machine pcspk-audiodev=hda # pcspeaker 设备
+QEMU+= -rtc base=localtime # 设备本地时间
+QEMU+= -drive file=$(BUILD_DIR)/SoulOS.img,if=ide,index=0,media=disk,format=raw # 主硬盘
+QEMU+= -drive file=$(BUILD_DIR)/slave.img,if=ide,index=1,media=disk,format=raw # 从硬盘
+
+QEMU_DISK:=-boot c
+
+.PHONY: qemu
+qemu: $(IMAGES)
+	$(QEMU) $(QEMU_DISK)
 
 .PHONY: qemub
 qemub:

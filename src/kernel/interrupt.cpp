@@ -4,14 +4,13 @@
 #include <kernel/debug.h>
 #include <kernel/printk.h>
 #include <kernel/task.h>
+#include <kernel/logk.h>
 
 gate_t globalIdt[IDT_SIZE];
 idt_pointer globalIdtPtr;
 
 // extern "C" void interruptHandler();
 
-#define LOGK(fmt, args...) DEBUGK(fmt, ##args)
-// #define LOGK(fmt, args...)
 
 #define ENTRY_SIZE 0x30
 

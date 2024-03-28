@@ -17,6 +17,7 @@ header_start:
     dd 8    ; size
 header_end:
 
+extern deviceInit
 extern consoleInit
 extern gdtInit
 extern memoryInit
@@ -32,6 +33,7 @@ _start:
     push ebx; 内存检测结果的结构数量指针
     push eax; magic
     ; 内存检测的初始化函数
+    call deviceInit
     call consoleInit
     call gdtInit
     lgdt [m_gdtPtr]

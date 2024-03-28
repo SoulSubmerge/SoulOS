@@ -2,6 +2,7 @@
 #include <io/cursor.h>
 #include <lib/charArray.h>
 #include <kernel/interrupt.h>
+#include <kernel/device.h>
 
 static ConsoleData consoleData;
 
@@ -510,7 +511,7 @@ static inline void stateCsi(ConsoleData *_con, char ch)
 }
 
 // 写控制台
-int _consoleWrite(ConsoleData *_con, char *buf, uint32 count)
+int _consoleWrite(ConsoleData *_con, char *buf, size_t count)
 {
     char ch;
     int nr = 0;
@@ -550,6 +551,11 @@ int _consoleWrite(ConsoleData *_con, char *buf, uint32 count)
     return nr;
 }
 
+int consoleWrite(void *dev, char *buf, size_t count)
+{
+    return _consoleWrite(&consoleData, buf, count);
+}
+
 extern "C" void consoleInit()
 {
     ConsoleData *_con = &consoleData;
@@ -564,9 +570,8 @@ extern "C" void consoleInit()
     _con->erase = ERASE;
     _con->style = STYLE;
     consoleClear(_con);
-}
-
-int consoleWrite(char *buf, uint32 count)
-{
-    return _consoleWrite(&consoleData, buf, count);
+    deviceInstall(
+        DEV_CHAR, DEV_CONSOLE,
+        &consoleData, "console", 0,
+        nullptr, nullptr, (void*)consoleWrite);
 }

@@ -90,7 +90,7 @@ typedef struct ConsoleData
     uint8 style;  // 当前样式
 }ConsoleData;
 
-int consoleWrite(char *buf, uint32 count); // 占时用于调用显卡写入字符的
+int consoleWrite(void *dev, char *buf, size_t count); // 占时用于调用显卡写入字符的
 // void consoleClear();
 
 
