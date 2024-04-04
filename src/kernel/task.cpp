@@ -11,6 +11,7 @@
 #include <kernel/gdt.h>
 #include <kernel/arena.h>
 #include <kernel/logk.h>
+#include <fs/fs.h>
 
 extern bitmap_t kernelMap;
 
@@ -143,28 +144,8 @@ void taskSleep(uint32 ms)
     // 记录目标全局时间片，在那个时刻需要唤醒任务
     task_t *current = runningTask();
     current->ticks = jiffies + ticks;
-    // printk("Sleep ticks: %d\n", jiffies);
 
-    // 从睡眠链表找到第一个比当前任务唤醒时间点更晚的任务，进行插入排序
-    list_t *list = &sleepList;
-    list_node_t *anchor = &list->tail;
-
-    for (list_node_t *ptr = list->head.next; ptr != &list->tail; ptr = ptr->next)
-    {
-        task_t *task = ELEMENT_ENTRY(task_t, node, ptr);
-
-        if (task->ticks > current->ticks)
-        {
-            anchor = ptr;
-            break;
-        }
-    }
-
-    assert(current->node.next == nullptr, "The rear drive of the node to be inserted is not empty.");
-    assert(current->node.prev == nullptr, "The precursor of the node to be inserted is not empty.");
-
-    // 插入链表
-    listInsertBefore(anchor, &current->node);
+    listInsertSort(&sleepList, &current->node, ELEMENT_NODE_OFFSET(task_t, node, ticks));
 
     // 阻塞状态是睡眠
     current->state = TASK_SLEEPING;
@@ -263,9 +244,13 @@ static task_t *taskCreate(target_t target, const char *name, uint32 priority, ui
     task->jiffies = 0;
     task->state = TASK_READY;
     task->uid = uid;
+    task->gid = 0; // TODO: group
     task->vmap = &kernelMap;
     task->pde = KERNEL_PAGE_DIR;
     task->brk = KERNEL_MEMORY_SIZE;
+    task->iroot = getRootInode();
+    task->ipwd = getRootInode();
+    task->umask = 0022; // 对应 0755
     task->magic = SOUL_MAGIC;
     return task;
 }
@@ -485,8 +470,6 @@ void taskInit()
     taskSetup();
     idleTask = taskCreate((target_t)idleThread,"idle",1,KERNEL_USER);
     taskCreate((target_t)initThread, "init", 5, NORMAL_USER);
-    taskCreate((target_t)testThread, "test", 5, KERNEL_USER);
-    taskCreate((target_t)testThread, "test", 5, KERNEL_USER);
-    taskCreate((target_t)testThread, "test", 5, KERNEL_USER);
+    taskCreate((target_t)testThread, "test", 5, NORMAL_USER);
 }
 

@@ -1,21 +1,15 @@
 #include <kernel/kernel.h>
-#include <io/cursor.h>
-#include <lib/charArray.h>
-#include <kernel/console.h>
-#include <kernel/printk.h>
-#include <kernel/debug.h>
-#include <kernel/gdt.h>
-#include <kernel/assert.h>
-#include <kernel/task.h>
-#include <kernel/interrupt.h>
-#include <lib/stdlib.h>
 #include <kernel/logk.h>
+#include <kernel/interrupt.h>
+#include <kernel/debug.h>
+#include <kernel/arena.h>
+#include <kernel/task.h>
 // extern "C"{ void * __dso_handle = 0 ;}
 // extern "C"{ void * __cxa_atexit = 0 ;}
 const unsigned int magic = SOUL_MAGIC;
 
 
-uint64 interruptCount = 0;
+unsigned long long interruptCount = 0;
 
 extern void interruptInit(); // 初始化中断和异常函数
 extern void clockInit(); // 初始化时钟相关函数
@@ -25,36 +19,41 @@ extern void memoryMapInit(); // 内存页初始化函数
 extern void mappingInit(); // 内存映射初始化函数
 extern void ideInit(); // 磁盘控制器初始化函数
 extern void syscallInit(); // 系统调用初始化函数
+extern void taskInit();
 extern void keyboardInit(); // 键盘中断初始化函数
 extern void tssInit();
+extern void bufferInit();
+extern void superInit();
+extern void inodeInit();
 extern void arenaInit();
 
 extern void memoryTest();
 extern void listTest();
 
-void testInterrupt(int32 _vector)
-{
-    printk("This is test interrupt. [ %d ]\n", interruptCount++);
-    sendEoi(_vector);
-    // int cc = 0;
-    // testInterrupt(26);
-}
 
 
 extern "C" void kernelInit()
 {
+    int* aPtr = (int*)0x100000;
+    *aPtr = 6;
+    BREAK_POINT;
     tssInit();
     memoryMapInit();
     mappingInit();
     arenaInit();
+    LOGK("\ntask address: %p\n",0x200000);
+    BREAK_POINT;
     interruptInit();
     clockInit();
     keyboardInit();
     timeInit();
     // rtcInit();
     ideInit();
-    taskInit();
     syscallInit();
+    taskInit();
+    bufferInit();
+    inodeInit();
+    superInit();
 
     setInterruptStateTrue();
     LOGK("\n - - - Kernel initialization is complete. - - - \n");

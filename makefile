@@ -4,6 +4,7 @@ BUILD_KERNEL_DIR:=$(BUILD_DIR)/kernel
 BUILD_IO_DIR:=$(BUILD_DIR)/io
 BUILD_LIB_DIR:=$(BUILD_DIR)/lib
 BUILD_TYPES_DIR:=$(BUILD_DIR)/types
+BUILD_FS_DIR:=$(BUILD_DIR)/fs
 
 SRC_DIR:=./src
 SRC_BOOT_DIR:=$(SRC_DIR)/boot
@@ -11,6 +12,7 @@ SRC_KERNEL_DIR:=$(SRC_DIR)/kernel
 SRC_IO_DIR:=$(SRC_DIR)/io
 SRC_LIB_DIR:=$(SRC_DIR)/lib
 SRC_TYPES_DIR:=$(SRC_DIR)/types
+SRC_FS_DIR:=$(SRC_DIR)/fs
 
 MULTIBOOT2:=0x10000
 ENTRY_POINT:=0x10040
@@ -58,6 +60,10 @@ $(BUILD_TYPES_DIR)/%.o: $(SRC_TYPES_DIR)/%.cpp
 	$(shell mkdir -p $(dir $@))
 	g++ $(CFLAGS) $(DEBUG) $(INCLUDE) -c $< -o $@
 
+$(BUILD_FS_DIR)/%.o: $(SRC_FS_DIR)/%.cpp
+	$(shell mkdir -p $(dir $@))
+	g++ $(CFLAGS) $(DEBUG) $(INCLUDE) -c $< -o $@
+
 LDFLAGS:= -m elf_i386 \
 		-static \
 		-Ttext $(ENTRYPOINT) \
@@ -89,8 +95,13 @@ $(BUILD_KERNEL_DIR)/kernel_temp.bin: $(BUILD_KERNEL_DIR)/kernel_asm.o \
 	$(BUILD_KERNEL_DIR)/arena.o \
 	$(BUILD_KERNEL_DIR)/ide.o \
 	$(BUILD_KERNEL_DIR)/device.o \
+	$(BUILD_KERNEL_DIR)/buffer.o \
+	$(BUILD_KERNEL_DIR)/system.o \
 	$(BUILD_IO_DIR)/io_asm.o \
 	$(BUILD_IO_DIR)/cursor.o \
+	$(BUILD_FS_DIR)/super.o \
+	$(BUILD_FS_DIR)/bmap.o \
+	$(BUILD_FS_DIR)/inode.o \
 	$(BUILD_LIB_DIR)/stdlib.o \
 	$(BUILD_LIB_DIR)/stdio.o \
 	$(BUILD_LIB_DIR)/charArray.o \
@@ -111,68 +122,7 @@ $(BUILD_KERNEL_DIR)/kernel.map: $(BUILD_KERNEL_DIR)/kernel_temp.bin
 
 
 
-$(BUILD_DIR)/SoulOS.img: $(BUILD_BOOT_DIR)/boot_asm.bin \
-	$(BUILD_BOOT_DIR)/kernelLoader_asm.bin \
-	$(BUILD_KERNEL_DIR)/kernel.bin \
-	$(BUILD_KERNEL_DIR)/kernel_temp.bin \
-	$(BUILD_KERNEL_DIR)/kernel.map \
-	$(SRC_DIR)/utils/master.sfdisk
-	yes | ./debug-tools/bochs-2.7/bin/bximage -q -hd=100 -func=create -sectsize=512 -imgmode=flat $@
-	dd if=$(BUILD_BOOT_DIR)/boot_asm.bin of=$@ bs=512 count=1 conv=notrunc
-	dd if=$(BUILD_BOOT_DIR)/kernelLoader_asm.bin of=$@ bs=512 count=4 seek=1 conv=notrunc
-	dd if=$(BUILD_KERNEL_DIR)/kernel.bin of=$@ bs=512 count=102400 seek=5 conv=notrunc
-# 磁盘分区
-	sfdisk $@ < $(SRC_DIR)/utils/master.sfdisk
 
-$(BUILD_DIR)/kernel.iso : $(BUILD_KERNEL_DIR)/kernel_temp.bin $(SRC_DIR)/utils/grub.cfg
-# 检测内核文件是否合法
-	grub-file --is-x86-multiboot2 $<
-# 创建 iso 目录
-	mkdir -p $(BUILD_DIR)/iso/boot/grub
-# 拷贝内核文件
-	cp $< $(BUILD_DIR)/iso/boot
-# 拷贝 grub 配置文件
-	cp $(SRC_DIR)/utils/grub.cfg $(BUILD_DIR)/iso/boot/grub
-# 生成 iso 文件
-	grub-mkrescue -o $@ $(BUILD_DIR)/iso
-
-$(BUILD_DIR)/slave.img:
-# 创建一个 32M 的硬盘镜像
-	yes | ./debug-tools/bochs-2.7/bin/bximage -q -hd=32 -func=create -sectsize=512 -imgmode=flat $@
-
-IMAGES:= $(BUILD_DIR)/SoulOS.img $(BUILD_DIR)/slave.img
-
-.PHONY: bochs
-bochs:
-	./debug-tools/bochs-2.7/bin/bochs -f ./bochsrc -q
-
-.PHONY: bochsb
-bochsb:
-	./debug-tools/bochs-2.7/bin/bochs -f ./bochsrc.grub -q
-
-
-QEMU:= qemu-system-i386 # 虚拟机
-QEMU+= -m 1024M # 内存
-QEMU+= -audiodev pa,id=hda # 音频设备
-QEMU+= -machine pcspk-audiodev=hda # pcspeaker 设备
-QEMU+= -rtc base=localtime # 设备本地时间
-QEMU+= -drive file=$(BUILD_DIR)/SoulOS.img,if=ide,index=0,media=disk,format=raw # 主硬盘
-QEMU+= -drive file=$(BUILD_DIR)/slave.img,if=ide,index=1,media=disk,format=raw # 从硬盘
-
-QEMU_DISK:=-boot c
-
-.PHONY: qemu
-qemu: $(IMAGES)
-	$(QEMU) $(QEMU_DISK)
-
-.PHONY: qemub
-qemub:
-	qemu-system-i386 -cdrom ./build/kernel.iso -boot d -m 1024 -smp 1
-
-.PHONY: vmdk
-vmdk:
-	qemu-img convert -pO vmdk ./build/SoulOS.img ./build/SoulOS.vmdk
-
-.PHONY: clean
-clean:
-	rm -rf $(BUILD_DIR)/*
+include ./src/utils/image.mk
+include ./src/utils/cdrom.mk
+include ./src/utils/cmd.mk

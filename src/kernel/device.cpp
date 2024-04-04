@@ -90,6 +90,7 @@ extern "C" void deviceInit()
         device->read = nullptr;
         device->write = nullptr;
         listInit(&device->requestList);
+        device->direct = DIRECT_UP;
     }
 }
 
@@ -125,13 +126,43 @@ static void doRequest(request_t *req)
         deviceRead(req->dev, req->buf, req->count, req->idx, req->flags);
         break;
     case REQ_WRITE:
-        LOGK("... doRequest idx: %p %p %d %d %d\n", req->dev, req->buf, req->count, req->idx, req->flags);
         deviceWrite(req->dev, req->buf, req->count, req->idx, req->flags);
         break;
     default:
         panic("req type %d unknown!!!");
         break;
     }
+}
+
+// 获得下一个请求
+static request_t *requestNextreq(device_t *device, request_t *req)
+{
+    list_t *list = &device->requestList;
+
+    if (device->direct == DIRECT_UP && req->node.next == &list->tail)
+    {
+        device->direct = DIRECT_DOWN;
+    }
+    else if (device->direct == DIRECT_DOWN && req->node.prev == &list->head)
+    {
+        device->direct = DIRECT_UP;
+    }
+
+    void *next = nullptr;
+    if (device->direct == DIRECT_UP)
+    {
+        next = req->node.next;
+    }
+    else
+    {
+        next = req->node.prev;
+    }
+
+    if (next == &list->head || next == &list->tail)
+    {
+        return nullptr;
+    }
+    return ELEMENT_ENTRY(request_t, node, next);
 }
 
 // 块设备请求
@@ -148,21 +179,21 @@ void deviceRequest(dev_t dev, void *buf, uint8 count, idx_t idx, int flags, uint
 
     request_t *req = (request_t*)kmalloc(sizeof(request_t));
 
-    req->dev = dev;
+    req->dev = device->dev;
     req->buf = (uint8*)buf;
     req->count = count;
     req->idx = offset;
     req->flags = flags;
     req->type = type;
     req->task = nullptr;
-
     // 判断列表是否为空
     bool empty = listEmpty(&device->requestList);
 
     // 将请求压入链表
-    listPush(&device->requestList, &req->node);
+    // listPush(&device->requestList, &req->node);
 
-    LOGK("??? deviceRequest idx: %d offset: %d\n", req->idx, offset);
+    // 将请求插入链表
+    listInsertSort(&device->requestList, &req->node, ELEMENT_NODE_OFFSET(request_t, node, idx));
 
     // 如果列表不为空，则阻塞，因为已经有请求在处理了，等待处理完成；
     if (!empty)
@@ -172,14 +203,13 @@ void deviceRequest(dev_t dev, void *buf, uint8 count, idx_t idx, int flags, uint
     }
 
     doRequest(req);
+    request_t *nextreq = requestNextreq(device, req);
 
     listRemove(&req->node);
     kfree(req);
 
-    if (!listEmpty(&device->requestList))
+    if (nextreq)
     {
-        // 先来先服务
-        request_t *nextreq = ELEMENT_ENTRY(request_t, node, device->requestList.tail.prev);
         assert(nextreq->task->magic == SOUL_MAGIC, "");
         taskUnblock(nextreq->task);
     }

@@ -2,8 +2,9 @@
 #define SOUL_MUTEX_H
 
 #include <types/types.h>
-#include <lib/list.h>
 #include <kernel/task.h>
+#include <lib/list.h>
+
 
 typedef struct mutex_t
 {
@@ -11,11 +12,9 @@ typedef struct mutex_t
     list_t waiters; // 等待队列
 }mutex_t;
 
-
-
 typedef struct lock_t
 {
-    task_t *holder; // 持有者
+    task_t *holder;     // 持有者
     mutex_t mutex;     // 互斥量
     uint32 repeat;     // 重入次数
 }lock_t;

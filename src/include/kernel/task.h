@@ -6,7 +6,7 @@
 #include <lib/list.h>
 
 #define KERNEL_USER 0
-#define NORMAL_USER 1
+#define NORMAL_USER 1000
 
 #define TASK_NAME_LEN 16
 
@@ -23,23 +23,29 @@ typedef enum task_state_t
     TASK_DIED,     // 死亡
 }task_state_t;
 
+struct inode_t;
+
 typedef struct task_t
 {
     uint32 *stack;              // 内核栈
     list_node_t node;           // 任务阻塞节点
-    task_state_t state;      // 任务状态
+    task_state_t state;         // 任务状态
     uint32 priority;            // 任务优先级
-    uint32 ticks;               // 剩余时间片
+    int32 ticks;                // 剩余时间片
     uint32 jiffies;             // 上次执行时全局时间片
     char name[TASK_NAME_LEN];   // 任务名
     uint32 uid;                 // 用户 id
+    uint32 gid;                 // 用户组 id
     pid_t pid;                  // 任务ID
     pid_t ppid;                 // 父任务ID
     uint32 pde;                 // 页目录物理地址
     bitmap_t *vmap;             // 进程虚拟内存位图
     uint32 brk;
     int32 status;               // 进程特殊状态
-    pid_t waitpid;            // 进程等待的 pid
+    pid_t waitpid;              // 进程等待的 pid
+    inode_t *ipwd;              // 进程当前目录 inode program work directory
+    inode_t *iroot;             // 进程根目录 inode
+    uint16 umask;                // 进程用户权限
     uint32 magic;               // 内核魔数，用于检测栈溢出
 }task_t;
 

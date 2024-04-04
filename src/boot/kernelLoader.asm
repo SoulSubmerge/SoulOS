@@ -110,7 +110,7 @@ ProtectMode:
     ; add esp, 0x0c
     push 0x05
     push 0x10000; 0xB00000
-    push 0x01 ; 0x80 -> 128块 16MB(内核固定16MB,需要提示内核大小需要修改memory.h的宏KERNEL_MEMORY_SIZE); 0x190 -> 400 块 50MB(最大)
+    push 0x01 ; 1块 128k ; 0x80 -> 128块 16MB(内核固定16MB,需要提示内核大小需要修改memory.h的宏KERNEL_MEMORY_SIZE); 0x190 -> 400 块 50MB(最大)
     call ReadBlocksFn
     add esp, 0x0c
     ; pop eax

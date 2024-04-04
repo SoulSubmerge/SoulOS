@@ -17,6 +17,7 @@
         "string_view": "cpp",
         "initializer_list": "cpp",
         "compare": "cpp",
-        "*.tcc": "cpp"
+        "*.tcc": "cpp",
+        "*.bin": "cpp"
     }
 }

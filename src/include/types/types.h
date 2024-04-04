@@ -36,6 +36,8 @@ typedef int32 dev_t;
 #define RESERVED RESERVED_TOKEN(reserved, __LINE__)
 
 typedef int32 fd_t;
+typedef uint16 mode_t; // 文件权限
+
 typedef enum std_fd_t
 {
     stdin,

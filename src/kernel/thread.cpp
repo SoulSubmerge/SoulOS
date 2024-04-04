@@ -9,6 +9,7 @@
 
 void idleThread()
 {
+    
     setInterruptStateTrue();
     uint32 counter = 0;
     while(true)
@@ -57,7 +58,6 @@ static void userInitThread()
 
 void initThread()
 {
-
     char temp[100]; // 为栈顶有足够的空间
     taskToUserMode((target_t)userInitThread);
 }
@@ -66,8 +66,8 @@ void testThread()
 {
     setInterruptStateTrue();
     uint32 counter = 0;
-    test();
-    LOGK("test finished of task %d", getpid());
+    mode_t mode = umask(0002);
+    LOGK("old umask id: %d\n", mode);
     while (true)
     {
         sleep(10);

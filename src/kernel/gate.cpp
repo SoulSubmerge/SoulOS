@@ -8,6 +8,7 @@
 #include <kernel/memory.h>
 #include <kernel/device.h>
 #include <lib/charArray.h>
+#include <kernel/buffer.h>
 
 #define SYSCALL_SIZE 256
 
@@ -32,16 +33,14 @@ int bbb = 2048;
 
 static uint32 sysTest()
 {
-    sleep(1000);
     char ch;
     device_t *device;
-    void *buf = (void *)allocKpage(1);
-    device = deviceFind(DEV_IDE_PART, 0);
+    device = deviceFind(DEV_KEYBOARD, 0);
     assert(device, "");
-    memset(buf, runningTask()->pid, 512);
-    LOGK("Writing Pid: %d %p\n", runningTask()->pid, buf);
-    deviceRequest(device->dev, buf, 1, runningTask()->pid, 0, REQ_WRITE);
-    freeKpage((uint32)buf, 1);
+    deviceRead(device->dev, &ch, 1, 0, 0);
+    device = deviceFind(DEV_CONSOLE, 0);
+    assert(device, "");
+    deviceWrite(device->dev, &ch, 1, 0, 0);
     return 255;
 }
 
@@ -57,6 +56,7 @@ int32 sysWrite(fd_t fd, char *buf, uint32 len)
 }
 
 extern time_t sysTime();
+extern mode_t sysUmask(mode_t mask);
 
 void syscallInit()
 {
@@ -76,4 +76,5 @@ void syscallInit()
     syscallTable[SYS_NR_BRK] = (handleFunc)sysBrk;
     syscallTable[SYS_NR_WRITE] = (handleFunc)sysWrite;
     syscallTable[SYS_NR_TIME] = (handleFunc)sysTime;
+    syscallTable[SYS_NR_UMASK] = (handleFunc)sysUmask;
 }
